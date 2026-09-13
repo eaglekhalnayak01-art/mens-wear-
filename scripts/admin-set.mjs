@@ -67,6 +67,10 @@ function flag(name) {
   return i === -1 ? null : args[i + 1];
 }
 
+import { loadLocalEnv } from "./load-env.mjs";
+
+loadLocalEnv();
+
 const root = process.cwd();
 const dbFile = process.env.DATABASE_PATH ?? path.join(root, "data", "app.db");
 if (!fs.existsSync(dbFile)) {

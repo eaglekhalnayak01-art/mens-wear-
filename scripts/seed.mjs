@@ -22,6 +22,9 @@ import {
   stockFor,
 } from "./catalog.data.mjs";
 import { buildImages } from "./build-images.mjs";
+import { loadLocalEnv } from "./load-env.mjs";
+
+loadLocalEnv(); // DATABASE_PATH, ADMIN_EMAIL, ADMIN_PASSWORD from .env.local
 
 const ROOT = process.cwd();
 const file = path.resolve(ROOT, process.env.DATABASE_PATH || "./data/app.db");

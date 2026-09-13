@@ -6,6 +6,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import { loadLocalEnv } from "./load-env.mjs";
+
+loadLocalEnv();
+
 const ROOT = process.cwd();
 const file = path.resolve(ROOT, process.env.DATABASE_PATH || "./data/app.db");
 const schema = path.join(ROOT, "src", "server", "db", "schema.sql");
