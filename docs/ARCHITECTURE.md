@@ -189,7 +189,9 @@ password, sign out every other device, clear a wrong-attempt pause).
 
 The bell in the dashboard header polls `GET /api/admin/notifications` every 45 s while
 the tab is visible and can raise a browser notification for new orders; marking read is
-`POST /api/admin/notifications`.
+`POST /api/admin/notifications` (mark read), and `POST /api/admin/notifications/test` writes one
+real row through the same path as an order so the owner can verify their number from the settings
+screen.
 
 Filters are links and GET forms, so the dashboard works with JS disabled and a
 filtered view can be pasted to staff on WhatsApp.

@@ -160,6 +160,47 @@ async function post(url: string, payload: unknown) {
   }
 }
 
+/**
+ * The “Send a test alert” button in Settings. It pushes one real row through the same
+ * code path an order uses — inbox, owner WhatsApp link, webhook — so the owner can
+ * prove the number is right before the first order arrives at 9 pm.
+ */
+export async function sendTestAlert(settings: Settings) {
+  const ownerNumber = settings.notifyMobile || settings.whatsapp;
+  const enabled = settings.notifyOrderEnabled;
+  const title = enabled ? "Test alert from the dashboard" : "Alerts are switched off";
+  const body = enabled
+    ? `If you can read this in the bell, a new order will reach ${ownerNumber ? `you on ${ownerNumber}` : "the dashboard"} the same way.`
+    : "Turn on “Alert me when an order arrives” to start receiving them.";
+
+  createNotification({
+    event: "order:placed",
+    title,
+    body,
+    channel: "inbox",
+    target: settings.shopName,
+    orderRef: null,
+  });
+
+  let webhookOk: boolean | null = null;
+  if (enabled && settings.notifyWebhookUrl) {
+    webhookOk = await post(settings.notifyWebhookUrl, { event: "test", title, body });
+  }
+
+  return {
+    ok: true,
+    enabled,
+    mobile: ownerNumber || null,
+    email: settings.notifyEmail || null,
+    webhookUrl: settings.notifyWebhookUrl || null,
+    webhookOk,
+    whatsappLink:
+      enabled && ownerNumber
+        ? waLink(ownerNumber, `${title}\n${body}\n(No order was placed — this was only a test.)`)
+        : null,
+  };
+}
+
 /** Status changes and cancellations land in the same inbox. */
 export function notifyOwner(event: NotificationEvent, input: { title: string; body: string; orderRef?: string }) {
   return createNotification({ event, ...input, channel: "inbox" });

@@ -37,18 +37,7 @@ export default function HomePage() {
 
       <TrustStrip />
 
-      <CategoryRail categories={categories.filter((c) => c.parent_id === null)} />
-
-      <CollectionStrip
-        background="paper"
-        eyebrow="Just landed"
-        title="New arrivals"
-        description="Fresh lots from the last two weeks — small runs, so the sizes you want do not wait."
-        products={newArrivals}
-        href="/collections/new-arrivals"
-        hrefLabel="All new arrivals"
-      />
-
+      {/* The shop's current offer, straight from Settings → Home page words. */}
       <PromoSplit
         primary={{
           eyebrow: "Limited lot",
@@ -67,6 +56,18 @@ export default function HomePage() {
           cta: "How it works",
           tone: "dark",
         }}
+      />
+
+      <CategoryRail categories={categories.filter((c) => c.parent_id === null)} />
+
+      <CollectionStrip
+        background="paper"
+        eyebrow="Just landed"
+        title="New arrivals"
+        description="Fresh lots from the last two weeks — small runs, so the sizes you want do not wait."
+        products={newArrivals}
+        href="/collections/new-arrivals"
+        hrefLabel="All new arrivals"
       />
 
       {trending.length > 0 ? (

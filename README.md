@@ -108,7 +108,9 @@ same rows.
 
 Every event is written to the `notifications` table first, so nothing is lost if a channel is down.
 The dashboard bell reads it (and can raise a browser notification while the tab is open). If
-`notifyMobile` is set, the same alert is prepared as a one-tap WhatsApp link for your number; if
+`notifyMobile` is set, the same alert is prepared as a one-tap WhatsApp link for your number — and
+**Settings → Order alerts → “Send a test alert”** pushes one row through that exact path so you can
+prove the number is right before the first real order lands. If
 `notifyWebhookUrl` is set, it is POSTed there — that endpoint is the seam for an SMS or
 WhatsApp-business sender.
 

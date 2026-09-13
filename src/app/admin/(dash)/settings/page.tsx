@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/page-bits";
+import { AlertTester } from "@/components/admin/alert-tester";
 import { SecurityPanel } from "@/components/admin/security-panel";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { IconArrowUpRight, IconShield } from "@/components/ui/icons";
@@ -37,6 +38,16 @@ export default async function AdminSettingsPage() {
 
           <aside className="space-y-4">
             <SecurityPanel state={{ email: admin.email, ...security }} />
+
+            <AlertTester
+              config={{
+                mobile: settings.notifyMobile || settings.whatsapp,
+                email: settings.notifyEmail,
+                webhookUrl: settings.notifyWebhookUrl,
+                enabled: settings.notifyOrderEnabled,
+                whatsappEnabled: settings.whatsappEnabled,
+              }}
+            />
 
             <section className="admin-card p-4">
               <h2 className="admin-section-title">Policy pages</h2>
