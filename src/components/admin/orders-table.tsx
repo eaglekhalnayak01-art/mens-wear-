@@ -7,7 +7,7 @@ import { StatusPill } from "@/components/ui/badge";
 import { IconArrowRight, IconBox, IconCheck, IconTruck } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/client-api";
-import { formatDate, formatDateTime, maskMobile, money } from "@/lib/format";
+import { formatDate, formatDateTime, money } from "@/lib/format";
 import { STATUS_META, isTerminal, nextStatus, statusMeta, type OrderStatus } from "@/lib/order-status";
 import { cn } from "@/lib/cn";
 import type { OrderSummary } from "@/server/repositories/types";
@@ -90,7 +90,8 @@ export function OrdersTable({ items }: { items: AdminOrderRow[] }) {
                   <td>
                     <span className="block max-w-[190px] truncate text-[12.5px] text-ink">{order.customerName}</span>
                     <span className="nums block text-[11px] text-muted">
-                      {maskMobile(order.customerMobile)}
+                      {/* Full number here on purpose: the list is where a call gets made. */}
+                      {order.customerMobile}
                       {order.city ? ` · ${order.city}` : ""}
                     </span>
                   </td>
