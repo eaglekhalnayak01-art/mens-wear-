@@ -12,16 +12,13 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const isLoginPage = pathname === "/admin/login";
   const hasSession = request.cookies.has("amw_admin");
 
-  if (isLoginPage) {
-    if (hasSession) {
-      const target = new URL("/admin", request.nextUrl);
-      return NextResponse.redirect(target);
-    }
-    return NextResponse.next();
-  }
+  // The login page is never bounced forward from here. The page checks the real
+  // session itself — a cookie can exist while the session behind it is expired,
+  // revoked or re-keyed, and redirecting on mere presence would then ping-pong
+  // /admin/login and /admin at each other forever.
+  if (pathname === "/admin/login") return NextResponse.next();
 
   if (!pathname.startsWith("/admin")) return NextResponse.next();
 

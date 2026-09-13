@@ -14,7 +14,8 @@ type Search = Promise<{ next?: string }>;
 export default async function AdminLoginPage({ searchParams }: { searchParams: Search }) {
   const { next } = await searchParams;
   const admin = await currentAdmin();
-  if (admin) redirect("/admin");
+  // Only a verified session gets forwarded, and only to a dashboard path.
+  if (admin) redirect(next && next.startsWith("/admin") ? next : "/admin");
   const settings = getSettings();
 
   return (

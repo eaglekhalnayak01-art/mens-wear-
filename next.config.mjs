@@ -1,9 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Dev-only: the sandbox serves the preview from a proxied *.e2b.app origin, and
+  // Next 15.5 warns that cross-origin /_next requests will need allowlisting.
+  // Harmless in production (ignored) — replace with your own host if you preview
+  // from somewhere else.
+  allowedDevOrigins: ["*.e2b.app"],
   poweredByHeader: false,
-  // Native modules used by the server data layer must not be bundled by webpack/turbopack.
-  serverExternalPackages: ["better-sqlite3", "sharp"],
+  // Native/optional modules used only on the server must not be bundled. The
+  // database itself is node:sqlite (a Node built-in, so nothing to allowlist).
+  serverExternalPackages: ["sharp"],
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [360, 420, 540, 640, 768, 828, 1080, 1200, 1600],
