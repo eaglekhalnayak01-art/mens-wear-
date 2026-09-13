@@ -1,0 +1,37 @@
+{
+  "name": "aakash-mens-wear",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aakash Men's Wear — premium men's fashion storefront + owner dashboard",
+  "scripts": {
+    "dev": "node scripts/next.mjs dev",
+    "build": "node scripts/next.mjs build",
+    "start": "node scripts/next.mjs start",
+    "db:setup": "node scripts/db-setup.mjs",
+    "db:seed": "node scripts/seed.mjs",
+    "setup": "node scripts/db-setup.mjs && node scripts/seed.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/playfair-display": "^5.3.0",
+    "clsx": "^2.1.1",
+    "next": "^15.5.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "sharp": "^0.34.4",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.13",
+    "@types/node": "^22.18.6",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "tailwindcss": "^4.1.13",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=20.9"
+  }
+}

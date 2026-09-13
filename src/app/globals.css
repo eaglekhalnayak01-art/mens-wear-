@@ -1,0 +1,353 @@
+@import "tailwindcss";
+
+/* ===========================================================================
+   Aakash Men's Wear — design tokens
+   One charcoal/bone palette, one accent, tight type scale, quiet motion.
+   Everything the shop needs to look like itself is in this file.
+   =========================================================================== */
+@theme {
+  --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-display: "Playfair Display", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Roboto Mono", Menlo, monospace;
+
+  /* Surfaces + ink */
+  --color-paper: #ffffff;
+  --color-bone: #f8f6f2;
+  --color-sand: #efeae0;
+  --color-mist: #e7e3da;
+  --color-line: #e2ddd2;
+  --color-line-soft: #ece8e0;
+  --color-ink: #17181a;
+  --color-ink-soft: #33353a;
+  --color-graphite: #5c5e63;
+  --color-muted: #7c7a75;
+
+  /* Single accent: aged brass. Used for focus, active filters, sale, CTAs on dark. */
+  --color-brass: #8a6b45;
+  --color-brass-deep: #6f5535;
+  --color-brass-tint: #f3ece1;
+
+  /* Feedback */
+  --color-good: #2f6b4f;
+  --color-good-tint: #e8f1eb;
+  --color-warn: #9a6a1c;
+  --color-warn-tint: #f7eeda;
+  --color-bad: #a13c2c;
+  --color-bad-tint: #f8e9e5;
+
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-hair: 0 1px 0 rgba(23, 24, 26, 0.04);
+  --shadow-card: 0 1px 2px rgba(23, 24, 26, 0.04), 0 10px 30px -22px rgba(23, 24, 26, 0.35);
+  --shadow-lift: 0 2px 6px rgba(23, 24, 26, 0.05), 0 22px 44px -26px rgba(23, 24, 26, 0.4);
+  --shadow-drawer: -24px 0 60px -30px rgba(23, 24, 26, 0.45);
+
+  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-fade-up: fade-up 0.55s var(--ease-soft) both;
+  --animate-fade-in: fade-in 0.4s var(--ease-soft) both;
+  --animate-scale-in: scale-in 0.24s var(--ease-soft) both;
+  --animate-slide-left: slide-left 0.32s var(--ease-out-quint) both;
+  --animate-rise: rise 0.5s var(--ease-soft) both;
+  --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
+  --animate-bump: bump 0.42s var(--ease-soft);
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-grow-x: grow-x 0.7s var(--ease-soft) both;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.975); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slide-left {
+  from { transform: translate3d(100%, 0, 0); }
+  to { transform: none; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@keyframes bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+@keyframes shimmer {
+  from { background-position: -160% 0; }
+  to { background-position: 260% 0; }
+}
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-line);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    color-scheme: light;
+  }
+
+  body {
+    background: var(--color-bone);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "cv05", "ss01", "tnum" 0;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.12;
+    text-wrap: balance;
+  }
+
+  /* Tabular figures keep price columns and totals from jittering. */
+  .nums,
+  table,
+  [data-money] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brass);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: var(--color-ink);
+    color: var(--color-bone);
+  }
+
+  img {
+    -webkit-user-drag: none;
+  }
+
+  /* Number inputs inside quantity/price fields read better without spinners. */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+}
+
+@layer components {
+  .shop-shell {
+    width: 100%;
+    max-width: 1360px;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 640px) {
+    .shop-shell { padding-inline: 1.75rem; }
+  }
+  @media (min-width: 1024px) {
+    .shop-shell { padding-inline: 2.5rem; }
+  }
+
+  .narrow-shell {
+    width: 100%;
+    max-width: 1080px;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 640px) {
+    .narrow-shell { padding-inline: 1.75rem; }
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .section-title {
+    font-size: clamp(1.75rem, 1.1rem + 2.2vw, 2.6rem);
+    line-height: 1.08;
+  }
+
+  .display {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  /* Editorial underline that grows on hover instead of bouncing around. */
+  .link-line {
+    position: relative;
+    display: inline-block;
+  }
+  .link-line::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    height: 1px;
+    width: 100%;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.34s var(--ease-soft);
+  }
+  .link-line:hover::after,
+  .link-line[data-active="true"]::after {
+    transform: scaleX(1);
+  }
+
+  .card-surface {
+    background: var(--color-paper);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+  }
+
+  .hair-grid {
+    background-image: linear-gradient(to right, var(--color-line-soft) 1px, transparent 1px);
+  }
+
+  .skeleton {
+    background-color: var(--color-sand);
+    background-image: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.7) 40%,
+      transparent 62%
+    );
+    background-size: 260% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+
+  /* Thin, unfussy scrollbars for horizontal rails. */
+  .rail-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-mist) transparent;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+  }
+  .rail-scroll > * {
+    scroll-snap-align: start;
+  }
+  .rail-scroll::-webkit-scrollbar {
+    height: 6px;
+  }
+  .rail-scroll::-webkit-scrollbar-thumb {
+    background: var(--color-mist);
+    border-radius: 99px;
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .zoom-frame {
+    overflow: hidden;
+    cursor: zoom-in;
+  }
+  .zoom-frame img {
+    transition: transform 0.75s var(--ease-out-quint);
+    will-change: transform;
+  }
+  .zoom-frame:hover img,
+  .zoom-frame:focus-visible img {
+    transform: scale(1.055);
+  }
+
+  /* Fade sections in once, on scroll — cheap and interruptible. */
+  .reveal {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+    transition: opacity 0.6s var(--ease-soft), transform 0.6s var(--ease-soft);
+  }
+  .reveal[data-shown="true"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  .prose-shop {
+    font-size: 15.5px;
+    line-height: 1.75;
+    color: var(--color-ink-soft);
+  }
+  .prose-shop h2 {
+    font-size: 1.15rem;
+    margin: 2.2rem 0 0.6rem;
+    color: var(--color-ink);
+  }
+  .prose-shop p + p {
+    margin-top: 1rem;
+  }
+  .prose-shop ul {
+    margin: 1rem 0 1rem 1rem;
+    list-style: disc;
+  }
+  .prose-shop strong {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+  .prose-shop a {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .zoom-frame:hover img { transform: none; }
+}
