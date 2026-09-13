@@ -11,7 +11,7 @@
 import { env } from "@/server/env";
 import { all, get, insert, nowIso, run, tx } from "@/server/db";
 import { badRequest, HttpError, rateLimited, unauthorized } from "@/server/http/errors";
-import { consume } from "@/server/security/rate-limit";
+import { consume, reset } from "@/server/security/rate-limit";
 import { readSettings } from "@/server/repositories/settings.repository";
 import { digestEquals, hashToken, randomOtp } from "@/server/security/crypto";
 import { createSession } from "@/server/security/sessions";
@@ -187,27 +187,117 @@ export async function loginWithPassword(mobile: string, password: string, req?: 
   return { id: customer.id, mobile: customer.mobile };
 }
 
-/** Admin sign-in — separate table, separate cookie, stricter throttle. */
+/** Admin sign-in — separate table, separate cookie, and a real lockout. */
+const ADMIN_MAX_FAILURES = 5;
+
+function lockExpiry(attempts: number) {
+  // 15 minutes after the fifth wrong password, doubling up to an hour: an
+  // online guesser is slowed to nothing without ever locking the owner out
+  // permanently — a shop that forgets a password can simply wait an hour.
+  if (attempts < ADMIN_MAX_FAILURES) return 0;
+  const steps = Math.min(2, attempts - ADMIN_MAX_FAILURES);
+  return 15 * 2 ** steps;
+}
+
 export async function adminLogin(email: string, password: string, req?: Request) {
   const key = `admin-login:${email.toLowerCase()}`;
-  const limit = consume(key, 6, 10 * 60 * 1000);
+  const limit = consume(key, 6, 10 * 60_000);
   if (!limit.ok) {
-    throw rateLimited("Too many failed sign-in attempts. Please wait before trying again.", limit.retryAfterSec);
+    throw rateLimited("Too many sign-in attempts from here. Please wait before trying again.", limit.retryAfterSec);
   }
-  const admin = get<{ id: number; email: string; password_hash: string; name: string }>(
-    `SELECT id, email, password_hash, name FROM admin_users WHERE lower(email) = lower(?)`,
+  const admin = get<{
+    id: number;
+    email: string;
+    password_hash: string;
+    name: string;
+    failed_attempts: number;
+    locked_until: string | null;
+  }>(
+    `SELECT id, email, password_hash, name, COALESCE(failed_attempts, 0) AS failed_attempts, locked_until
+       FROM admin_users WHERE lower(email) = lower(?)`,
     email,
   );
+
+  if (admin?.locked_until) {
+    const until = new Date(admin.locked_until).getTime();
+    if (until > Date.now()) {
+      throw rateLimited("Too many wrong attempts on this account. Wait a few minutes, then try again.", Math.ceil((until - Date.now()) / 1000));
+    }
+  }
+
   const { verifyPassword } = await import("@/server/security/crypto");
   // Verify even when the user is unknown so timing does not confirm accounts.
   const ok = await verifyPassword(password, admin?.password_hash ?? "scrypt$16384$8$1$AAAA$AAAA");
+
   if (!admin || !ok) {
-    throw unauthorized("Those details did not match our records. Please check and try again.");
+    const attempts = (admin?.failed_attempts ?? 0) + 1;
+    const lockMinutes = lockExpiry(attempts);
+    if (admin) {
+      run(
+        `UPDATE admin_users SET failed_attempts = ?, locked_until = ? WHERE id = ?`,
+        attempts,
+        lockMinutes ? new Date(Date.now() + lockMinutes * 60_000).toISOString() : null,
+        admin.id,
+      );
+    }
+    // One sentence for "no such account" and "wrong password", so the form cannot be
+    // used to discover which emails this shop uses.
+    throw unauthorized(
+      lockMinutes
+        ? `That account is paused for ${lockMinutes} minutes after too many attempts.`
+        : "Those details did not match our records. Please check and try again.",
+    );
   }
-  run(`UPDATE admin_users SET last_login_at = ? WHERE id = ?`, nowIso(), admin.id);
+
+  tx(() => {
+    run(`UPDATE admin_users SET last_login_at = ?, failed_attempts = 0, locked_until = NULL WHERE id = ?`, nowIso(), admin.id);
+  });
   await createSession("admin", admin.id, req);
-  consume(key, 0, 1); // reset the failure window on success
+  reset(key);
+  // A correct password also clears this IP's counter, so one person typing it wrong
+  // five times before getting in cannot be punished for the sixth attempt.
+  const { clientIp } = await import("@/server/security/sessions");
+  reset(`admin-login:${clientIp(req) ?? "local"}`);
   return { id: admin.id, name: admin.name, email: admin.email };
+}
+
+/**
+ * Owner changes their own password. Every session is revoked afterwards — including
+ * this one — because that is the only way a password change means something when a
+ * laptop was left signed in somewhere.
+ */
+export async function changeAdminPassword(adminId: number, currentPassword: string, nextPassword: string, req?: Request) {
+  if (nextPassword.length < 12) throw badRequest("Use at least 12 characters. A short sentence with a space is stronger than a word with symbols.");
+  const admin = get<{ id: number; password_hash: string }>(`SELECT id, password_hash FROM admin_users WHERE id = ?`, adminId);
+  const { verifyPassword, hashPassword } = await import("@/server/security/crypto");
+  if (!admin || !(await verifyPassword(currentPassword, admin.password_hash))) {
+    throw unauthorized("Your current password did not match. Nothing was changed.");
+  }
+  if (currentPassword === nextPassword) throw badRequest("That is the password you already use.", { newPassword: "Choose a different one" });
+
+  const hash = await hashPassword(nextPassword);
+  tx(() => {
+    run(`UPDATE admin_users SET password_hash = ?, failed_attempts = 0, locked_until = NULL WHERE id = ?`, hash, adminId);
+    run(`UPDATE auth_sessions SET revoked_at = ? WHERE subject_type = 'admin' AND subject_id = ? AND revoked_at IS NULL`, nowIso(), adminId);
+  });
+  return { ok: true, sessionsRevoked: true };
+}
+
+/** Clears a login lock without waiting it out (used from the security card). */
+export function unlockAdminAccount(adminId: number) {
+  run(`UPDATE admin_users SET failed_attempts = 0, locked_until = NULL WHERE id = ?`, adminId);
+  return { ok: true };
+}
+
+export function adminSecurityState(adminId: number) {
+  const row = get<{ failedAttempts: number; lockedUntil: string | null; lastLoginAt: string | null; sessions: number }>(
+    `SELECT COALESCE(failed_attempts,0) AS failedAttempts, locked_until AS lockedUntil, last_login_at AS lastLoginAt,
+            (SELECT COUNT(*) FROM auth_sessions s WHERE s.subject_type = 'admin' AND s.subject_id = a.id AND s.revoked_at IS NULL AND s.expires_at > ?) AS sessions
+       FROM admin_users a WHERE a.id = ?`,
+    nowIso(),
+    adminId,
+  );
+  return row ?? { failedAttempts: 0, lockedUntil: null, lastLoginAt: null, sessions: 0 };
 }
 
 export function otpAuditTrail(mobile: string, limit = 5) {

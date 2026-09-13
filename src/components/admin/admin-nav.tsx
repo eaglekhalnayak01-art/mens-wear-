@@ -14,6 +14,8 @@ import {
   IconTag,
   IconUsers,
 } from "@/components/ui/icons";
+import { BrandMark } from "@/components/ui/brand-mark";
+import { AdminAlerts } from "@/components/admin/admin-alerts";
 import { cn } from "@/lib/cn";
 
 export const ADMIN_LINKS = [
@@ -35,19 +37,37 @@ function isActive(pathname: string, href: string, exact?: boolean) {
  * of the shop, so the small screen gets a full-height sheet with the same links
  * and a bottom tab bar for the four screens used daily.
  */
-export function AdminSidebar({ shopName }: { shopName: string }) {
+export function AdminSidebar({
+  shopName,
+  logoImage,
+  logoText = "M",
+}: {
+  shopName: string;
+  logoImage?: string;
+  logoText?: string;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <aside className="sticky top-0 hidden h-dvh w-[212px] shrink-0 flex-col border-r border-line bg-paper px-3 py-4 lg:flex">
-        <Link href="/admin" className="flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2 py-1.5 transition-colors hover:bg-sand">
-          <span className="grid h-8 w-8 place-items-center rounded-[var(--radius-xs)] bg-ink font-display text-[14px] text-bone">A</span>
-          <span className="min-w-0">
-            <span className="block truncate text-[12.5px] font-semibold text-ink">{shopName}</span>
-            <span className="block text-[10.5px] uppercase tracking-[0.12em] text-muted">Owner area</span>
-          </span>
-        </Link>
+        <div className="flex items-start justify-between gap-1">
+          <Link href="/admin" className="flex min-w-0 items-center gap-2.5 rounded-[var(--radius-sm)] px-2 py-1.5 transition-colors hover:bg-sand">
+            {logoImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoImage} alt="" className="h-8 w-8 shrink-0 rounded-[var(--radius-xs)] object-contain" />
+            ) : (
+              <BrandMark size={30} />
+            )}
+            <span className="min-w-0">
+              <span className="block truncate text-[12.5px] font-semibold text-ink">{shopName}</span>
+              <span className="block text-[10.5px] uppercase tracking-[0.12em] text-muted">
+                {logoText ? `${logoText} · Owner area` : "Owner area"}
+              </span>
+            </span>
+          </Link>
+          <AdminAlerts />
+        </div>
 
         <nav aria-label="Dashboard" className="mt-5 flex flex-col gap-0.5">
           {ADMIN_LINKS.map((link) => (
@@ -74,9 +94,12 @@ export function AdminSidebar({ shopName }: { shopName: string }) {
           <IconMenu size={18} />
         </button>
         <p className="truncate text-[12.5px] font-semibold text-ink">{shopName} · Owner area</p>
-        <a href="/" className="text-[11.5px] uppercase tracking-[0.09em] text-muted transition-colors hover:text-ink">
-          Shop
-        </a>
+        <div className="flex shrink-0 items-center gap-1">
+          <AdminAlerts />
+          <a href="/" className="text-[11.5px] uppercase tracking-[0.09em] text-muted transition-colors hover:text-ink">
+            Shop
+          </a>
+        </div>
       </div>
 
       {open ? (
@@ -85,9 +108,11 @@ export function AdminSidebar({ shopName }: { shopName: string }) {
           <div className="animate-slide-left absolute inset-y-0 left-0 flex w-[264px] flex-col bg-paper px-3 py-4">
             <div className="mb-4 flex items-center justify-between px-1">
               <p className="text-[12.5px] font-semibold text-ink">{shopName}</p>
+              <div className="flex items-center gap-1">
               <button type="button" onClick={() => setOpen(false)} aria-label="Close menu" className="grid h-8 w-8 place-items-center rounded-full text-ink hover:bg-sand">
                 <IconClose size={16} />
               </button>
+              </div>
             </div>
             <nav aria-label="Dashboard" className="flex flex-col gap-0.5">
               {ADMIN_LINKS.map((link) => (

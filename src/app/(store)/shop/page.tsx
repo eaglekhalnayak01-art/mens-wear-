@@ -7,7 +7,7 @@ import { PER_PAGE, parseShopQuery, searchParamsToString, toShopQueryInput } from
 export const metadata: Metadata = {
   title: "Shop all clothing",
   description:
-    "Shirts, suits, denim, kurtas and knitwear from Aakash Men's Wear. Filter by size, colour, price and availability — every piece listed is what is actually in the shop.",
+    "Shirts, suits, denim, kurtas and knitwear from Mens Wear. Filter by size, colour, price and availability — every piece listed is what is actually in the shop.",
   alternates: { canonical: "/shop" },
 };
 

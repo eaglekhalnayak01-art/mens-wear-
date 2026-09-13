@@ -50,6 +50,19 @@ export type Settings = {
   codFee: number;
   codEnabled: boolean;
   onlineEnabled: boolean;
+  /** How “pay online” actually works today: a UPI QR the owner uploads, or a gateway. */
+  onlineMode: "qr" | "gateway" | "off";
+  upiId: string;
+  upiPayeeName: string;
+  upiQrImage: string;
+  paymentInstructions: string;
+  /** Ask for the UPI reference number so a transfer can be matched to an order. */
+  utrRequired: boolean;
+  /** Owner-side alerts: a number to notify, an inbox address, an optional webhook. */
+  notifyMobile: string;
+  notifyEmail: string;
+  notifyWebhookUrl: string;
+  notifyOrderEnabled: boolean;
   dispatchDays: number;
   deliveryDaysMin: number;
   deliveryDaysMax: number;
@@ -64,17 +77,17 @@ export type Settings = {
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-  shopName: "Aakash Men's Wear",
+  shopName: "Mens Wear",
   tagline: "Considered menswear, tailored for everyday",
-  logoText: "A",
+  logoText: "M",
   logoImage: "",
   brandStory:
-    "Aakash Men's Wear began in 2014 as a two-shelf shop on Station Road with one idea: a man should be able to buy a shirt he can wear to a wedding on Saturday and to the office on Monday. We still buy fabric ourselves, still check every stitch before it is folded, and still remember what you bought last season.",
+    "Mens Wear began in 2014 as a two-shelf shop on Station Road with one idea: a man should be able to buy a shirt he can wear to a wedding on Saturday and to the office on Monday. We still buy fabric ourselves, still check every stitch before it is folded, and still remember what you bought last season.",
   aboutTitle: "A shop that knows its cloth",
   foundedYear: "2014",
   phone: "+91 98250 41188",
   whatsapp: "9825041188",
-  email: "care@aakashmenswear.in",
+  email: "care@menswear.in",
   addressLine1: "12 Station Road, Rajwadi Corner",
   addressLine2: "Near City Bus Stand",
   city: "Surat",
@@ -82,12 +95,12 @@ export const DEFAULT_SETTINGS: Settings = {
   pin: "395002",
   mapUrl: "https://maps.google.com/?q=Station+Road+Surat",
   hours: "Mon – Sat, 10:30 am – 9:00 pm · Sunday, 11:00 am – 2:00 pm",
-  instagram: "https://instagram.com/aakashmenswear",
-  facebook: "https://facebook.com/aakashmenswear",
+  instagram: "https://instagram.com/menswear",
+  facebook: "",
   youtube: "",
   whatsappEnabled: true,
   whatsappGreeting:
-    "Hello Aakash Men's Wear, I would like some help choosing a size.",
+    "Hello Mens Wear, I would like some help choosing a size.",
   heroEyebrow: "Autumn / Winter 2026",
   heroTitle: "Cloth that earns\nits place in the wardrobe",
   heroSubtitle:
@@ -96,7 +109,7 @@ export const DEFAULT_SETTINGS: Settings = {
   offerTitle: "Flat 25% off winter knits",
   offerText: "Sweaters, hoodies and sweatshirts reduced while the lot lasts.",
   offerImage: "/images/banner-sale.jpg",
-  announcement: "Free delivery across India on orders above ₹1,999 · Cash on delivery available",
+  announcement: "Free delivery across India on orders above ₹1,999 · Cash on delivery and UPI accepted",
   announcementEnabled: true,
   footerNote: "Prices include GST. Free size exchange within 7 days in store.",
   deliveryFee: 79,
@@ -104,7 +117,18 @@ export const DEFAULT_SETTINGS: Settings = {
   minOrderValue: 499,
   codFee: 0,
   codEnabled: true,
-  onlineEnabled: false,
+  onlineEnabled: true,
+  onlineMode: "qr",
+  upiId: "menswear@okhdfcbank",
+  upiPayeeName: "Mens Wear",
+  upiQrImage: "",
+  paymentInstructions:
+    "Pay the exact amount to the UPI ID or scan the QR, then type the 12-digit reference number from your UPI app. We confirm the order as soon as the money is visible — usually within minutes.",
+  utrRequired: false,
+  notifyMobile: "9825041188",
+  notifyEmail: "care@menswear.in",
+  notifyWebhookUrl: "",
+  notifyOrderEnabled: true,
   dispatchDays: 2,
   deliveryDaysMin: 3,
   deliveryDaysMax: 6,

@@ -25,12 +25,14 @@ type VariantRow = {
   color: string | null;
   sku: string | null;
   image: string | null;
+  payment_mode: string | null;
 };
 
 function loadVariants(ids: number[]) {
   const rows = all<VariantRow>(
     `SELECT v.id AS variant_id, p.id AS product_id, p.name, p.slug, p.status,
             p.price, v.price AS variant_price, p.compare_at_price, v.stock,
+            p.payment_mode,
             s.label AS size, c.name AS color, v.sku,
             (SELECT src FROM product_images pi WHERE pi.product_id = p.id
               ORDER BY pi.is_primary DESC, pi.sort LIMIT 1) AS image
@@ -62,6 +64,8 @@ export function quoteCart(
       freeShippingGap: settings.freeDeliveryOver,
       minOrderShortfall: 0,
       notices: [],
+      allowsCod: true,
+      allowsOnline: true,
     };
   }
 
@@ -111,6 +115,7 @@ export function quoteCart(
       sku: row.sku,
       availableStock: row.stock,
       maxQtyReached: finalQty >= maxQty,
+      paymentMode: row.payment_mode === "cod" || row.payment_mode === "online" ? row.payment_mode : "both",
     });
   }
 
@@ -121,6 +126,25 @@ export function quoteCart(
 
   if (options.forCheckout && itemCount === 0) {
     throw new HttpError(400, "validation", "Your cart is empty — add something you like first.");
+  }
+
+  // Per-style payment rules. A made-to-order jacket can be prepaid-only, a heavy
+  // coat cash-only; the basket as a whole can only use a method every line accepts.
+  const onlineOnly = quoted.filter((line) => line.paymentMode === "online");
+  const codOnly = quoted.filter((line) => line.paymentMode === "cod");
+  const allowsCod = onlineOnly.length === 0;
+  const allowsOnline = codOnly.length === 0;
+  const payName = (lines: QuotedLine[]) =>
+    lines.length === 1 ? lines[0].name : `${lines[0].name} and ${lines.length - 1} other line${lines.length === 2 ? "" : "s"}`;
+  if (options.paymentMethod === "cod" && onlineOnly.length > 0) {
+    const message = `${payName(onlineOnly)} can only be paid online — choose UPI at the next step.`;
+    if (options.forCheckout) throw new HttpError(409, "conflict", message);
+    notices.push(message);
+  }
+  if (options.paymentMethod === "online" && codOnly.length > 0) {
+    const message = `${payName(codOnly)} is cash on delivery only. Pay at the door instead.`;
+    if (options.forCheckout) throw new HttpError(409, "conflict", message);
+    notices.push(message);
   }
 
   let shipping = subtotal > 0 ? settings.deliveryFee : 0;
@@ -140,6 +164,8 @@ export function quoteCart(
     freeShippingGap: Math.max(0, settings.freeDeliveryOver - subtotal),
     minOrderShortfall: Math.max(0, settings.minOrderValue - subtotal),
     notices,
+    allowsCod,
+    allowsOnline,
   };
 }
 
@@ -176,5 +202,7 @@ export function quoteToClientPayload(quote: Quote) {
     freeShippingGap: quote.freeShippingGap,
     minOrderShortfall: quote.minOrderShortfall,
     notices: quote.notices,
+    allowsCod: quote.allowsCod,
+    allowsOnline: quote.allowsOnline,
   };
 }

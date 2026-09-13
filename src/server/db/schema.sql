@@ -1,5 +1,5 @@
 -- ===========================================================================
---  Aakash Men's Wear — relational schema (SQLite / node:sqlite)
+--  Mens Wear — relational schema (SQLite / node:sqlite)
 --  Portable SQL: the same DDL maps 1:1 onto Postgres/MySQL later.
 --  Money is stored in paise-free decimal INR (REAL) at the shop's scale;
 --  swap to INTEGER paisa when a payment gateway needs exact minor units.
@@ -40,6 +40,10 @@ CREATE TABLE IF NOT EXISTS products (
   description         TEXT,
   fabric              TEXT,          -- material / composition shown on the PDP
   care                TEXT,          -- care instructions
+  -- Which payment modes this style accepts. A made-to-measure or discounted piece
+  -- can be prepaid-only; a heavy coat can be cash-only. Enforced in the quote.
+  payment_mode        TEXT NOT NULL DEFAULT 'both' CHECK (payment_mode IN ('both','cod','online')),
+  delivery_days       INTEGER,       -- per-style dispatch promise, else the shop-wide one
   price               REAL NOT NULL CHECK (price >= 0),
   compare_at_price    REAL,          -- MRP / original price
   sku                 TEXT UNIQUE,
@@ -115,6 +119,8 @@ CREATE TABLE IF NOT EXISTS customers (
   name          TEXT,
   email         TEXT,
   password_hash TEXT,                     -- nullable: OTP-first, password optional
+  failed_attempts INTEGER NOT NULL DEFAULT 0,
+  locked_until    TEXT,   -- set after repeated wrong passwords; see adminLogin
   created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   last_login_at TEXT
 );
@@ -141,6 +147,8 @@ CREATE TABLE IF NOT EXISTS admin_users (
   email         TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   role          TEXT NOT NULL DEFAULT 'owner' CHECK (role IN ('owner','staff')),
+  failed_attempts INTEGER NOT NULL DEFAULT 0,
+  locked_until    TEXT,   -- set after repeated wrong passwords; see adminLogin
   created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   last_login_at TEXT
 );
@@ -174,7 +182,7 @@ CREATE INDEX IF NOT EXISTS idx_otp_mobile ON otp_challenges(mobile, created_at D
 -- --- Orders -----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS orders (
   id                    INTEGER PRIMARY KEY,
-  public_ref            TEXT NOT NULL UNIQUE,   -- AMW-2026-4F7K2  (also the track link)
+  public_ref            TEXT NOT NULL UNIQUE,   -- MW-2026-4F7K2  (also the track link)
   customer_id           INTEGER REFERENCES customers(id) ON DELETE SET NULL,
   guest_name            TEXT NOT NULL,
   guest_mobile          TEXT NOT NULL,
@@ -279,6 +287,25 @@ LEFT JOIN product_variants v ON v.product_id = p.id AND v.is_active = 1
 GROUP BY p.id;
 
 -- Contact-form messages. Kept small on purpose: this is an inbox, not a CRM.
+-- --- Owner alerts ----------------------------------------------------------
+-- Every order event that should reach the shop owner lands here first: the
+-- dashboard bell reads this table, and the webhook/SMS sender drains it. Keeping
+-- the row means a notification is never the only copy of the fact.
+CREATE TABLE IF NOT EXISTS notifications (
+  id          INTEGER PRIMARY KEY,
+  event       TEXT NOT NULL,               -- order:placed | order:cancelled | …
+  title       TEXT NOT NULL,
+  body        TEXT NOT NULL,
+  channel     TEXT NOT NULL DEFAULT 'inbox',  -- inbox | webhook | whatsapp | email
+  target      TEXT,
+  order_ref   TEXT,
+  sent_at     TEXT,
+  read_at     TEXT,
+  created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(id DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_read   ON notifications(read_at);
+
 CREATE TABLE IF NOT EXISTS enquiries (
   id          INTEGER PRIMARY KEY,
   name        TEXT NOT NULL,

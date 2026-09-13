@@ -12,6 +12,8 @@ export type CheckoutInput = {
     recipient?: string;
   };
   paymentMethod: "cod" | "online";
+  /** UPI reference (UTR) typed by a customer who paid to the shop's QR. */
+  paymentReference?: string;
   notes?: string;
   items: { variantId: number; qty: number }[];
   saveAddress?: boolean;

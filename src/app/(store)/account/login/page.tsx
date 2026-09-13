@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Sign in",
-  description: "Sign in to Aakash Men's Wear with a one-time code sent to your mobile number. No password to remember.",
+  description: "Sign in to Mens Wear with a one-time code sent to your mobile number. No password to remember.",
   robots: { index: false, follow: false },
 };
 

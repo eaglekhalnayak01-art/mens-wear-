@@ -24,6 +24,12 @@ export default function CheckoutPage() {
         deliveryDaysMax: settings.deliveryDaysMax,
         whatsapp: settings.whatsapp,
         shopName: settings.shopName,
+        onlineMode: settings.onlineMode,
+        upiId: settings.upiId,
+        upiPayeeName: settings.upiPayeeName,
+        upiQrImage: settings.upiQrImage,
+        paymentInstructions: settings.paymentInstructions,
+        utrRequired: settings.utrRequired,
       }}
     />
   );

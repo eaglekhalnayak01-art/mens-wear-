@@ -1,5 +1,5 @@
 /**
- * The demo catalogue for Aakash Men's Wear.
+ * The demo catalogue for Mens Wear.
  *
  * Kept as a plain data module (not inside the app) so the seeder can run
  * standalone, and so the shop's real launch data can replace this file without
@@ -11,20 +11,22 @@
  */
 
 export const storeProfile = {
-  shopName: "Aakash Men's Wear",
+  shopName: "Mens Wear",
   tagline: "Considered menswear, cut and checked in-house since 2014",
   phone: "+91 98250 41188",
   whatsapp: "9825041188",
-  email: "care@aakashmenswear.in",
+  email: "care@menswear.in",
   addressLine1: "12 Station Road, Rajwadi Corner",
   addressLine2: "Ground floor, below Hotel Shreeji",
   city: "Surat",
   state: "Gujarat",
   pin: "395002",
   hours: "Mon – Sat 10:30 am – 9:00 pm · Sun 11:00 am – 2:00 pm",
-  instagram: "https://instagram.com/aakashmenswear",
-  facebook: "https://facebook.com/aakashmenswear",
+  instagram: "https://instagram.com/menswear",
+  facebook: "https://facebook.com/menswear",
   announcement: "Free delivery across India above ₹1,999 · Cash on delivery available · Exchange within 7 days",
+  whatsappGreeting: "Hello! Tell us the size you wear and we will hold it at the counter.",
+  logoText: "M",
 };
 
 /** Order matters: this is the order the owner sees in the nav and filters. */
@@ -103,7 +105,7 @@ export const products = [
     slug: "boxy-oversized-cotton-tee",
     category: "t-shirts",
     sub: "Oversized",
-    brand: "Aakash Studio",
+    brand: "Mens Wear Studio",
     price: 995,
     mrp: 1599,
     colors: ["Ecru", "Midnight", "Sage"],
@@ -161,7 +163,7 @@ export const products = [
     slug: "everyday-tee-3-pack",
     category: "t-shirts",
     sub: "Crew Neck",
-    brand: "Aakash Studio",
+    brand: "Mens Wear Studio",
     price: 2299,
     mrp: 3897,
     colors: ["White", "Charcoal", "Midnight"],
@@ -376,6 +378,8 @@ export const products = [
   {
     name: "Charcoal Wool Two-Piece Suit",
     slug: "charcoal-wool-two-piece-suit",
+    pay: "online",
+    days: 9,
     category: "formal-wear",
     sub: "Suits",
     brand: "Monarch & Co",
@@ -400,6 +404,8 @@ export const products = [
   {
     name: "Navy Wedding-Season Suit",
     slug: "navy-wedding-season-suit",
+    pay: "online",
+    days: 10,          // cut and stitched after the order, so it is prepaid
     category: "formal-wear",
     sub: "Suits",
     brand: "Virendra & Co",
@@ -438,7 +444,7 @@ export const products = [
     slug: "unstructured-charcoal-linen-blazer",
     category: "blazers",
     sub: "Linen Blend",
-    brand: "Aakash Studio",
+    brand: "Mens Wear Studio",
     price: 6495,
     mrp: 9999,
     colors: ["Charcoal", "Sand", "Navy"],
@@ -491,6 +497,7 @@ export const products = [
   {
     name: "Rigid Denim Trucker Jacket",
     slug: "rigid-denim-trucker-jacket",
+    pay: "cod",           // ships heavy; the shop prefers cash at the door
     category: "jackets",
     sub: "Denim",
     brand: "Roadsmith",
@@ -653,6 +660,7 @@ export const products = [
   {
     name: "Jacquard Silk-Blend Festive Kurta",
     slug: "jacquard-silk-blend-festive-kurta",
+    pay: "online",
     category: "kurta",
     sub: "Festive",
     brand: "Virendra & Co",
@@ -689,6 +697,7 @@ export const products = [
   {
     name: "Nehru Jacket — Bandhgala",
     slug: "nehru-jacket-bandhgala",
+    days: 7,
     category: "ethnic-wear",
     sub: "Nehru Jacket",
     brand: "Virendra & Co",
@@ -785,7 +794,7 @@ export const products = [
     slug: "weekend-cotton-set",
     category: "casual-wear",
     sub: "Weekend",
-    brand: "Aakash Studio",
+    brand: "Mens Wear Studio",
     price: 2495,
     mrp: 3894,
     colors: ["Ecru", "Sage", "Midnight"],
@@ -803,7 +812,7 @@ export const products = [
     slug: "everyday-layer-bundle",
     category: "casual-wear",
     sub: "Everyday",
-    brand: "Aakash Studio",
+    brand: "Mens Wear Studio",
     price: 4495,
     mrp: 7497,
     colors: ["Charcoal", "Midnight", "Olive"],

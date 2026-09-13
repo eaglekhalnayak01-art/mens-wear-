@@ -10,6 +10,7 @@ import { invalidate } from "@/server/db/query-cache";
 import { all, get, insert, nowIso, run, tx } from "@/server/db";
 import { HttpError, badRequest, conflict, notFound } from "@/server/http/errors";
 import { quoteCart } from "@/server/services/pricing.service";
+import { isOnlineAccepted } from "@/server/services/payments.service";
 import { readSettings, type Settings } from "@/server/repositories/settings.repository";
 import { saveAddress, upsertCustomerByMobile } from "@/server/repositories/customers.repository";
 import { STATUS_META, TIMELINE_STEPS, releasesStock, type OrderStatus } from "@/lib/order-status";
@@ -32,13 +33,14 @@ export function expectedDeliveryFrom(settings: Settings) {
 }
 
 function assertPaymentAllowed(method: "cod" | "online", settings: Settings) {
+  // Kept in one place with the checkout's own option list (payments.service).
   if (method === "cod" && !settings.codEnabled) {
     throw badRequest("Cash on delivery is paused right now. Please choose online payment.", {
       paymentMethod: "Cash on delivery is unavailable for this order.",
     });
   }
-  if (method === "online" && !settings.onlineEnabled) {
-    throw badRequest("Card / UPI payment is not switched on for this shop yet — please choose cash on delivery.", {
+  if (method === "online" && !isOnlineAccepted(settings)) {
+    throw badRequest("Online payment is not switched on for this shop yet — please choose cash on delivery.", {
       paymentMethod: "Online payment is temporarily unavailable.",
     });
   }
@@ -69,6 +71,7 @@ export function placeOrder(input: CheckoutInput, linkedCustomerId?: number): Pla
 
   // Authoritative pricing + stock check (throws 409 when a size just sold out).
   const quote = quoteCart(input.items, settings, { forCheckout: true, paymentMethod: input.paymentMethod });
+  const utr = input.paymentMethod === "online" ? (input.paymentReference ?? "").trim() : "";
 
   if (settings.minOrderValue > 0 && quote.subtotal < settings.minOrderValue) {
     throw badRequest(
@@ -114,7 +117,10 @@ export function placeOrder(input: CheckoutInput, linkedCustomerId?: number): Pla
       quote.codFee,
       quote.total,
       input.paymentMethod,
-      input.paymentMethod === "cod" ? "pending" : "created",
+      // 'pending' for both: COD is collected at the door, an online transfer is
+      // waiting to be matched in the shop's UPI account. orders.payment_status only
+      // knows pending | paid | failed | refunded — never invent a fifth value here.
+      "pending",
       "placed",
       input.notes?.slice(0, 400) ?? null,
       placedAt,
@@ -141,12 +147,17 @@ export function placeOrder(input: CheckoutInput, linkedCustomerId?: number): Pla
       );
     }
 
+    // A UPI reference is stored on the payment row: the owner matches it against
+    // their bank statement, then marks the order paid. Nothing is auto-captured.
     insert(
-      `INSERT INTO payments (order_id, provider, amount, status, created_at) VALUES (?,?,?,?,?)`,
+      `INSERT INTO payments (order_id, provider, intent_id, amount, status, raw_json, created_at)
+       VALUES (?,?,?,?,?,?,?)`,
       id,
-      input.paymentMethod === "cod" ? "cod" : "gateway_pending",
+      input.paymentMethod === "cod" ? "cod" : settings.onlineMode === "qr" ? "upi_qr" : "gateway_pending",
+      utr || null,
       quote.total,
       "created",
+      utr ? JSON.stringify({ reference: utr, payee: settings.upiPayeeName, upiId: settings.upiId }) : null,
       placedAt,
     );
 
@@ -154,7 +165,7 @@ export function placeOrder(input: CheckoutInput, linkedCustomerId?: number): Pla
       `INSERT INTO order_events (order_id, status, note, actor_type, created_at) VALUES (?,?,?,?,?)`,
       id,
       "placed",
-      `Order received by ${settings.shopName}.`,
+      utr ? `Order received. Customer paid to UPI and quoted reference ${utr}.` : `Order received by ${settings.shopName}.`,
       "customer",
       placedAt,
     );
@@ -210,6 +221,40 @@ export function placeOrder(input: CheckoutInput, linkedCustomerId?: number): Pla
     expectedDeliveryAt,
     lines: quote.lines.map((line) => ({ name: line.name, qty: line.qty, size: line.size, color: line.color })),
   };
+}
+
+/**
+ * Recording a payment by hand. UPI transfers arrive against the shop's own account,
+ * so a human confirms them; the order status is deliberately untouched — paid and
+ * packed are two different facts.
+ */
+export function setPaymentStatus(orderId: number, status: "paid" | "pending" | "failed", actorName?: string) {
+  const order = get<{ id: number; status: string; public_ref: string; total: number; payment_status: string }>(
+    `SELECT id, status, public_ref, total, payment_status FROM orders WHERE id = ?`,
+    orderId,
+  );
+  if (!order) throw notFound("That order could not be found.");
+
+  const at = nowIso();
+  tx(() => {
+    run(`UPDATE orders SET payment_status = ?, updated_at = ? WHERE id = ?`, status, at, orderId);
+    run(
+      `UPDATE payments SET status = ? WHERE order_id = ? AND status <> 'refunded'`,
+      status === "paid" ? "captured" : status === "failed" ? "failed" : "created",
+      orderId,
+    );
+    insert(
+      `INSERT INTO order_events (order_id, status, note, actor_type, created_at) VALUES (?,?,?,?,?)`,
+      orderId,
+      order.status,
+      `Payment marked ${status}${actorName ? ` by ${actorName}` : ""}.`,
+      "admin",
+      at,
+    );
+  });
+
+  invalidate("orders", "shop");
+  return { ok: true, status, previous: order.payment_status };
 }
 
 /** Puts reserved stock back on the shelf when an order is cancelled in time. */

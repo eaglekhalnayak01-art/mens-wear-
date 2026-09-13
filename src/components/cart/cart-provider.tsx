@@ -37,6 +37,9 @@ export type QuoteTotals = {
   freeShippingGap: number;
   minOrderShortfall: number;
   notices: string[];
+  /** A line in the basket may refuse COD or online; checkout dims what is refused. */
+  allowsCod?: boolean;
+  allowsOnline?: boolean;
 };
 
 const STORAGE_KEY = "amw.cart.v1";
@@ -69,6 +72,8 @@ const EMPTY_TOTALS: QuoteTotals = {
   freeShippingGap: 0,
   minOrderShortfall: 0,
   notices: [],
+  allowsCod: true,
+  allowsOnline: true,
 };
 
 function readStorage(): CartItem[] {

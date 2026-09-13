@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ProductDetail } from "@/components/product/product-detail";
+import { isOnlineAccepted } from "@/server/services/payments.service";
 import { ProductGrid } from "@/components/shop/product-grid";
 import { SectionHeading } from "@/components/home/section-heading";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
@@ -17,13 +18,13 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const found = getProductWithRelated(slug);
   if (!found) return { title: "Product not found" };
   const { product } = found;
-  const description = (product.description ?? `${product.name} from ${product.brand ?? "Aakash Men's Wear"}.`).slice(0, 158);
+  const description = (product.description ?? `${product.name} from ${product.brand ?? "Mens Wear"}.`).slice(0, 158);
   return {
     title: product.name,
     description,
     alternates: { canonical: `/product/${product.slug}` },
     openGraph: {
-      title: `${product.name} · Aakash Men's Wear`,
+      title: `${product.name} · Mens Wear`,
       description,
       url: absoluteUrl(`/product/${product.slug}`),
       type: "website",
@@ -60,6 +61,7 @@ export default async function ProductPage({ params }: { params: Params }) {
 
       <div className="shop-shell pb-14 pt-5 md:pb-20 md:pt-8">
         <ProductDetail
+          onlineAvailable={isOnlineAccepted(settings)}
           product={product}
           settings={settings}
           related={

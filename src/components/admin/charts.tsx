@@ -59,11 +59,11 @@ export function StatusBreakdown({ counts }: { counts: { status: string; n: numbe
   const total = counts.reduce((sum, entry) => sum + entry.n, 0) || 1;
   const colors: Record<string, string> = {
     placed: "var(--color-mist)",
-    confirmed: "#d8d0c2",
+    confirmed: "#e6d5ba",
     processing: "var(--color-brass)",
-    packed: "#b99a70",
-    shipped: "#8a8f96",
-    out_for_delivery: "#6f747b",
+    packed: "#e08b3c",
+    shipped: "#8a7b68",
+    out_for_delivery: "#6a5d4e",
     delivered: "var(--color-good)",
     cancelled: "var(--color-bad)",
   };

@@ -1,17 +1,22 @@
 /**
  * Owner + customer notifications.
  *
- * Deliberately not wired to a paid provider: on order events we log a
- * structured line and build a ready-to-send WhatsApp message (which the owner
- * can tap in the dashboard). Swapping in WhatsApp Business API / MSG91 / email
- * means implementing `send()` below — no call site changes.
+ * Every alert is written to the `notifications` table first — the dashboard bell and
+ * the owner's inbox read that, so an alert is never the only copy of the fact. Then,
+ * best-effort and never allowed to fail the request, it also:
+ *   • POSTs to `notifyWebhookUrl` (any SMS/WhatsApp/Slack bridge can sit behind it),
+ *   • prepares a one-tap WhatsApp link for the owner's number,
+ *   • keeps the console line for a sandbox with no network.
+ *
+ * Wiring a real provider means implementing `post()` below — no call site changes.
  */
 import { money } from "@/lib/format";
-import { env } from "@/server/env";
+import { createNotification } from "@/server/repositories/notifications.repository";
 import type { Settings } from "@/server/repositories/settings.repository";
 
 export type NotificationEvent =
   | "order:placed"
+  | "order:payment"
   | "order:confirmed"
   | "order:packed"
   | "order:shipped"
@@ -25,8 +30,6 @@ export type NotificationPayload = {
   body: string;
   meta?: Record<string, string | number>;
 };
-
-const CHANNELS = ["whatsapp", "sms", "email"] as const;
 
 function waLink(number: string, body: string) {
   const digits = number.replace(/\D/g, "");
@@ -48,40 +51,118 @@ export function buildWhatsAppOrderMessage(order: {
   ].join("\n");
 }
 
-/** Called right after an order is created — must never break the checkout. */
-export async function notifyOrderPlaced(
-  order: { publicRef: string; customerName: string; customerMobile: string; total: number; items: number; paymentMethod: string },
-  settings: Settings,
-) {
-  const message: NotificationPayload = {
-    event: "order:placed",
-    to: settings.whatsapp,
-    subject: `New order ${order.publicRef}`,
-    body: buildWhatsAppOrderMessage(order),
-    meta: { orderId: order.publicRef, amount: order.total },
-  };
+export type OrderAlert = {
+  publicRef: string;
+  customerName: string;
+  customerMobile: string;
+  total: number;
+  items: number;
+  paymentMethod: string;
+  paymentReference?: string;
+  city?: string;
+};
 
-  const ownerLink = settings.whatsapp
+function alertTitle(event: NotificationEvent, order: OrderAlert) {
+  if (event === "order:payment") return `UPI reference for ${order.publicRef}`;
+  if (event === "order:cancelled") return `Order ${order.publicRef} cancelled`;
+  return `New order ${order.publicRef} · ${money(order.total)}`;
+}
+
+function alertBody(event: NotificationEvent, order: OrderAlert) {
+  const payment = order.paymentReference
+    ? `Paid to UPI, reference ${order.paymentReference}`
+    : order.paymentMethod === "cod"
+      ? "Cash on delivery"
+      : "Paid online";
+  return [
+    `${order.customerName} · ${order.customerMobile}`,
+    order.city ? `Deliver to ${order.city}` : null,
+    `${order.items} item${order.items === 1 ? "" : "s"} · ${payment}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** Persists the alert and tries each configured channel. Never throws. */
+export async function notifyOrderPlaced(order: OrderAlert, settings: Settings) {
+  const event: NotificationEvent = order.paymentReference ? "order:payment" : "order:placed";
+  const title = alertTitle(event, order);
+  const body = alertBody(event, order);
+  const enabled = settings.notifyOrderEnabled;
+
+  const inboxId = createNotification({
+    event,
+    title,
+    body,
+    channel: "inbox",
+    target: settings.shopName,
+    orderRef: order.publicRef,
+  });
+
+  if (!enabled) return { queued: false, inboxId, ownerLink: null as string | null };
+
+  const ownerNumber = settings.notifyMobile || settings.whatsapp;
+  const ownerLink = ownerNumber
     ? waLink(
-        settings.whatsapp,
-        `Order ${order.publicRef} received ✅\n${order.customerName} · ${order.items} item(s) · ${money(order.total)}\nMobile: ${order.customerMobile}`,
+        ownerNumber,
+        `${title}\n${body}\nOpen the dashboard to confirm and pack it.`,
       )
     : null;
 
-  console.log(
-    JSON.stringify(
-      {
-        tag: "notification",
-        channel: CHANNELS[0],
-        ...message,
-        ownerWhatsAppLink: ownerLink,
-      },
-      null,
-      0,
-    ),
-  );
+  if (ownerNumber) {
+    createNotification({
+      event,
+      title,
+      body,
+      channel: "whatsapp",
+      target: ownerNumber,
+      orderRef: order.publicRef,
+      sentAt: new Date().toISOString(),
+    });
+  }
 
-  return { queued: env.otp.transport !== "off", ownerLink };
+  // A webhook is the seam for a real SMS/WhatsApp-business bridge: same payload,
+  // server-side only, failure recorded but never fatal.
+  if (settings.notifyWebhookUrl) {
+    void post(settings.notifyWebhookUrl, { event, title, body, order: order, mobile: ownerNumber })
+      .then((ok) =>
+        createNotification({
+          event,
+          title,
+          body: ok ? "Webhook accepted the alert." : "Webhook did not accept the alert.",
+          channel: "webhook",
+          target: settings.notifyWebhookUrl,
+          orderRef: order.publicRef,
+          sentAt: ok ? new Date().toISOString() : null,
+        }),
+      )
+      .catch(() => undefined);
+  }
+
+  // The console line is the sandbox stand-in for a real sender: `npm run dev` output
+  // is where you can see exactly what a customer-facing SMS/WhatsApp bridge would post.
+  console.log(JSON.stringify({ tag: "notification", event, to: ownerNumber, subject: title, body }, null, 0));
+
+  return { queued: true, inboxId, ownerLink };
+}
+
+async function post(url: string, payload: unknown) {
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(4000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Status changes and cancellations land in the same inbox. */
+export function notifyOwner(event: NotificationEvent, input: { title: string; body: string; orderRef?: string }) {
+  return createNotification({ event, ...input, channel: "inbox" });
 }
 
 /** Customer-side confirmation message (surfaced as a one-tap WhatsApp link). */

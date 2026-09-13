@@ -31,6 +31,7 @@ const FULL_ORDER_SELECT = `
          o.guest_name AS customerName, o.guest_mobile AS customerMobile, o.guest_email AS email,
          o.address_line1 AS line1, o.address_line2 AS line2, o.city, o.state, o.pin, o.landmark,
          o.notes, o.cancelled_reason AS cancelledReason,
+         (SELECT py.intent_id FROM payments py WHERE py.order_id = o.id ORDER BY py.id DESC LIMIT 1) AS paymentReference,
          o.expected_delivery_at AS expectedDeliveryAt, o.delivered_at AS deliveredAt,
          o.customer_id AS customerId, o.updated_at AS updatedAt
     FROM orders o`;
@@ -169,6 +170,7 @@ export function buildOrderDetail(row: Record<string, unknown>): OrderDetail {
     shipping: Number(row.shipping),
     codFee: Number(row.codFee),
     notes: (row.notes as string | null) ?? null,
+    paymentReference: (row.paymentReference as string | null) ?? null,
     cancelledReason: (row.cancelledReason as string | null) ?? null,
     expectedDeliveryAt: (row.expectedDeliveryAt as string | null) ?? null,
     deliveredAt: (row.deliveredAt as string | null) ?? null,

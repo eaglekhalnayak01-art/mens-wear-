@@ -77,6 +77,10 @@ export type ProductInput = {
   compareAtPrice?: number | null;
   sku?: string;
   status: "published" | "hidden" | "draft";
+  paymentMode: "both" | "cod" | "online";
+  deliveryDays?: number | null;
+  rating?: number | null;
+  ratingCount?: number;
   isFeatured: boolean;
   isNewArrival: boolean;
   isBestseller: boolean;
@@ -197,8 +201,9 @@ export function createProduct(input: ProductInput) {
       `INSERT INTO products
         (name, slug, category_id, sub_category, brand, description, fabric, care,
          price, compare_at_price, sku, status, is_featured, is_new_arrival, is_bestseller,
-         low_stock_threshold, created_at, updated_at, published_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         low_stock_threshold, payment_mode, delivery_days, rating, rating_count,
+         created_at, updated_at, published_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       input.name.trim(),
       slug,
       input.categoryId ?? null,
@@ -215,6 +220,10 @@ export function createProduct(input: ProductInput) {
       input.isNewArrival ? 1 : 0,
       input.isBestseller ? 1 : 0,
       input.lowStockThreshold,
+      input.paymentMode ?? "both",
+      input.deliveryDays ?? null,
+      input.rating ?? null,
+      input.ratingCount ?? 0,
       nowIso(),
       nowIso(),
       input.status === "published" ? nowIso() : null,
@@ -240,6 +249,7 @@ export function updateProduct(id: number, input: ProductInput) {
          name = ?, slug = ?, category_id = ?, sub_category = ?, brand = ?, description = ?,
          fabric = ?, care = ?, price = ?, compare_at_price = ?, sku = ?, status = ?,
          is_featured = ?, is_new_arrival = ?, is_bestseller = ?, low_stock_threshold = ?,
+         payment_mode = ?, delivery_days = ?, rating = ?, rating_count = ?,
          published_at = COALESCE(published_at, CASE WHEN ? = 'published' THEN ? ELSE NULL END),
          updated_at = ?
        WHERE id = ?`,
@@ -259,6 +269,10 @@ export function updateProduct(id: number, input: ProductInput) {
       input.isNewArrival ? 1 : 0,
       input.isBestseller ? 1 : 0,
       input.lowStockThreshold,
+      input.paymentMode ?? "both",
+      input.deliveryDays ?? null,
+      input.rating ?? null,
+      input.ratingCount ?? 0,
       input.status,
       nowIso(),
       nowIso(),
@@ -294,6 +308,8 @@ export function patchProduct(id: number, patch: Record<string, unknown>) {
     isNewArrival: "is_new_arrival",
     isBestseller: "is_bestseller",
     lowStockThreshold: "low_stock_threshold",
+    paymentMode: "payment_mode",
+    deliveryDays: "delivery_days",
     stock: "stock",
   };
   const sets: string[] = [];

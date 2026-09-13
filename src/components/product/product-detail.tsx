@@ -19,7 +19,18 @@ import type { Settings } from "@/server/repositories/settings.repository";
  * panel and the sticky mobile bar) and nothing else — the gallery, the specs and
  * the related rail are independent, so the page stays readable as a file.
  */
-export function ProductDetail({ product, settings, related }: { product: Product; settings: Settings; related: React.ReactNode }) {
+export function ProductDetail({
+  product,
+  settings,
+  related,
+  onlineAvailable = settings.onlineEnabled,
+}: {
+  product: Product;
+  settings: Settings;
+  related: React.ReactNode;
+  /** Server-side truth about whether an online method can actually be taken today. */
+  onlineAvailable?: boolean;
+}) {
   const selection = useVariantSelection(product);
   const { add } = useCart();
   const { push } = useToast();
@@ -66,7 +77,7 @@ export function ProductDetail({ product, settings, related }: { product: Product
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,46%)] lg:items-start lg:gap-14">
       <Gallery
         images={product.gallery.length > 0 ? product.gallery : [product.image].filter(Boolean)}
-        alt={`${product.name} — Aakash Men's Wear`}
+        alt={`${product.name} — Mens Wear`}
         badges={
           <>
             {product.isNewArrival ? <Badge tone="ink">New</Badge> : null}
@@ -92,6 +103,7 @@ export function ProductDetail({ product, settings, related }: { product: Product
             returnWindowDays: settings.returnWindowDays,
             freeDeliveryOver: settings.freeDeliveryOver,
             codEnabled: settings.codEnabled,
+            onlineEnabled: onlineAvailable,
           }}
         />
         <span ref={sentinel} aria-hidden="true" className="block h-px" />

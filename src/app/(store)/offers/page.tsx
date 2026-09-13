@@ -13,7 +13,7 @@ export const revalidate = 60;
 export const metadata: Metadata = {
   title: "Special offers & reduced lots",
   description:
-    "End-of-line and sample pieces from Aakash Men's Wear, priced down to clear the rail. Same fabric, same fitting, same 7-day exchange.",
+    "End-of-line and sample pieces from Mens Wear, priced down to clear the rail. Same fabric, same fitting, same 7-day exchange.",
   alternates: { canonical: "/offers" },
 };
 

@@ -18,10 +18,31 @@ export type PaymentOption = {
   available: boolean;
   fee: number;
   badge?: string;
+  /** "qr" means the shop takes a direct UPI transfer the owner verifies by hand. */
+  mode?: "qr" | "gateway";
+  upiId?: string;
+  payeeName?: string;
+  qrImage?: string;
+  instructions?: string;
+  utrRequired?: boolean;
 };
+
+/**
+ * Whether this shop can take an online payment right now — either a live gateway,
+ * or a UPI id the owner uploaded a QR for. One rule, used by checkout, the quote and
+ * the order placement, so the three can never disagree.
+ */
+export function isOnlineAccepted(settings: Settings) {
+  return Boolean(
+    settings.onlineEnabled &&
+      (env.payments.onlineEnabled || (settings.onlineMode === "qr" && settings.upiId?.trim())),
+  );
+}
 
 export function paymentOptions(settings: Settings): PaymentOption[] {
   const gatewayLive = env.payments.onlineEnabled;
+  const qrReady = settings.onlineMode === "qr" && Boolean(settings.upiId?.trim());
+  const onlineAvailable = settings.onlineEnabled && (gatewayLive || qrReady);
   return [
     {
       id: "cod",
@@ -33,13 +54,21 @@ export function paymentOptions(settings: Settings): PaymentOption[] {
     },
     {
       id: "online",
-      label: "UPI / Card / Net banking",
+      label: gatewayLive ? "UPI / Card / Net banking" : "UPI — direct to the shop",
       hint: gatewayLive
         ? "Pay securely with UPI, card or net banking."
-        : "We will take payment online soon. For now, pay by cash on delivery or on WhatsApp.",
-      available: settings.onlineEnabled && gatewayLive,
+        : qrReady
+          ? "Scan the shop's QR or pay its UPI ID, then tell us the reference number. We confirm the moment it shows up."
+          : "We will take payment online soon. For now, pay by cash on delivery or on WhatsApp.",
+      available: onlineAvailable,
       fee: 0,
-      badge: gatewayLive ? undefined : "Coming soon",
+      badge: gatewayLive ? undefined : qrReady ? "Pay & we confirm" : "Coming soon",
+      mode: gatewayLive ? "gateway" : qrReady ? "qr" : undefined,
+      upiId: qrReady && !gatewayLive ? settings.upiId : undefined,
+      payeeName: qrReady && !gatewayLive ? settings.upiPayeeName : undefined,
+      qrImage: qrReady && !gatewayLive ? settings.upiQrImage : undefined,
+      instructions: qrReady && !gatewayLive ? settings.paymentInstructions : undefined,
+      utrRequired: qrReady && !gatewayLive ? settings.utrRequired : undefined,
     },
   ];
 }

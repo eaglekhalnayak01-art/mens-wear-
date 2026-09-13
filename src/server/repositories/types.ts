@@ -24,6 +24,10 @@ export type ProductCard = {
   isNewArrival: boolean;
   isBestseller: boolean;
   isFeatured: boolean;
+  /** Per-style payment rules, decided by the owner in the product form. */
+  paymentMode: "both" | "cod" | "online";
+  /** Dispatch promise for this style; null falls back to the shop-wide window. */
+  deliveryDays: number | null;
   rating: number | null;
   ratingCount: number;
   badge?: string | null;
@@ -88,6 +92,7 @@ export type QuotedLine = {
   sku: string | null;
   availableStock: number;
   maxQtyReached: boolean;
+  paymentMode: "both" | "cod" | "online";
 };
 
 export type Quote = {
@@ -102,6 +107,9 @@ export type Quote = {
   freeShippingGap: number;
   minOrderShortfall: number;
   notices: string[];
+  /** False when something in the cart refuses that method — checkout dims it. */
+  allowsCod: boolean;
+  allowsOnline: boolean;
 };
 
 export type OrderSummary = {
@@ -147,6 +155,8 @@ export type OrderDetail = OrderSummary & {
   codFee: number;
   notes: string | null;
   cancelledReason: string | null;
+  /** UPI reference the customer typed when they paid to the shop's QR. */
+  paymentReference: string | null;
   expectedDeliveryAt: string | null;
   deliveredAt: string | null;
   items: {

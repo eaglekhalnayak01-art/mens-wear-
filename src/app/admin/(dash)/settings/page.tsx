@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/page-bits";
+import { SecurityPanel } from "@/components/admin/security-panel";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { IconArrowUpRight, IconShield } from "@/components/ui/icons";
 import { readSettings } from "@/server/repositories/settings.repository";
+import { adminSecurityState } from "@/server/services/auth.service";
+import { requireAdminPage } from "@/server/security/guard";
 import { POLICY_PAGES } from "@/lib/policies";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +15,9 @@ export const metadata: Metadata = { title: "Settings", robots: { index: false } 
 
 export default async function AdminSettingsPage() {
   const settings = readSettings();
+  // The layout already gates this route; asking again keeps the page's own types honest.
+  const admin = await requireAdminPage("/admin/settings");
+  const security = adminSecurityState(admin.id);
 
   return (
     <div className="py-6 sm:py-8">
@@ -30,6 +36,8 @@ export default async function AdminSettingsPage() {
           <SettingsForm settings={{ ...settings }} />
 
           <aside className="space-y-4">
+            <SecurityPanel state={{ email: admin.email, ...security }} />
+
             <section className="admin-card p-4">
               <h2 className="admin-section-title">Policy pages</h2>
               <p className="mt-1.5 text-[11.5px] leading-relaxed text-muted">

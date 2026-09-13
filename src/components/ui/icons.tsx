@@ -430,3 +430,10 @@ export const IconRuler = (p: IconProps) => (
     <path d="M7 8v3M11 8v4M15 8v3M19 8v4" />
   </Svg>
 );
+
+export const IconBell = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M6 9a6 6 0 0 1 12 0c0 4 1.4 5.6 2 6.4H4c.6-.8 2-2.4 2-6.4Z" />
+    <path d="M10 19a2 2 0 0 0 4 0" />
+  </Svg>
+);

@@ -57,7 +57,7 @@ export function AdminLoginForm({ next = "/admin" }: { next?: string }) {
 
       <div className="mt-5 space-y-4">
         <Field label="Email" required error={fields.email} htmlFor="ad-email">
-          <Input id="ad-email" type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} invalid={Boolean(fields.email)} placeholder="admin@aakashmenswear.in" />
+          <Input id="ad-email" type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} invalid={Boolean(fields.email)} placeholder="you@yourshop.in" />
         </Field>
 
         <Field label="Password" required error={fields.password} htmlFor="ad-password">

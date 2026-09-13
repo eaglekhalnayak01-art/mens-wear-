@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const title = known?.title ?? `${category!.name} for men`;
   return {
     title,
-    description: (known?.description ?? category?.blurb ?? "").slice(0, 158) || `Shop ${title} at Aakash Men's Wear.`,
+    description: (known?.description ?? category?.blurb ?? "").slice(0, 158) || `Shop ${title} at Mens Wear.`,
     alternates: { canonical: `/collections/${slug}` },
   };
 }

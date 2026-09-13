@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/ui/brand-mark";
 import { cn } from "@/lib/cn";
 
 /**
- * Text wordmark by default (a real shop's logo is usually its name set in the
- * brand face), and an image as soon as the owner uploads one in Settings.
+ * The lockup: collar mark + the shop's name set in the brand face. Text rather than
+ * an image by default, because a real shop's logo is usually its name — and it
+ * recolours with the theme instead of shipping a second file. If the owner uploads
+ * a logo in Settings, that image takes over.
  */
 export function Wordmark({
   shopName,
@@ -11,6 +14,7 @@ export function Wordmark({
   tone = "ink",
   size = "md",
   href = "/",
+  mark = true,
   className,
 }: {
   shopName: string;
@@ -18,8 +22,11 @@ export function Wordmark({
   tone?: "ink" | "bone";
   size?: "sm" | "md" | "lg";
   href?: string | null;
+  /** Set false where the mark already sits next to this. */
+  mark?: boolean;
   className?: string;
 }) {
+  const markSize = { sm: 24, md: 30, lg: 42 }[size];
   const [primary, ...rest] = shopName.split(" ");
   const sub = rest.join(" ");
   const sizes = {
@@ -32,20 +39,25 @@ export function Wordmark({
     // eslint-disable-next-line @next/next/no-img-element
     <img src={logoImage} alt={shopName} className={cn("h-8 w-auto object-contain", size === "lg" && "h-11")} />
   ) : (
-    <span className="flex flex-col leading-none">
-      <span className={cn("display font-semibold tracking-[-0.015em]", sizes.name, tone === "bone" ? "text-bone" : "text-ink")}>{primary}</span>
-      {sub ? (
-        <span
-          className={cn(
-            "font-semibold uppercase tracking-[0.34em]",
-            sizes.sub,
-            tone === "bone" ? "text-bone/65" : "text-muted",
-            "mt-[5px]",
-          )}
-        >
-          {sub}
+    <span className="flex items-center gap-2.5">
+      {mark ? <BrandMark size={markSize} tone={tone} /> : null}
+      <span className="flex flex-col leading-none">
+        <span className={cn("display font-semibold tracking-[-0.01em]", sizes.name, tone === "bone" ? "text-bone" : "text-ink")}>
+          {primary}
         </span>
-      ) : null}
+        {sub ? (
+          <span
+            className={cn(
+              "font-semibold uppercase tracking-[0.3em]",
+              sizes.sub,
+              tone === "bone" ? "text-bone/70" : "text-brass-deep",
+              "mt-[5px]",
+            )}
+          >
+            {sub}
+          </span>
+        ) : null}
+      </span>
     </span>
   );
 

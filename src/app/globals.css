@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 /* ===========================================================================
-   Aakash Men's Wear — design tokens
-   One charcoal/bone palette, one accent, tight type scale, quiet motion.
+   Mens Wear — design tokens
+   Cream + charcoal + one marigold accent, tight type scale, quiet motion.
    Everything the shop needs to look like itself is in this file.
    =========================================================================== */
 @theme {
@@ -10,30 +10,34 @@
   --font-display: "Playfair Display", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   --font-mono: ui-monospace, "SFMono-Regular", "Roboto Mono", Menlo, monospace;
 
-  /* Surfaces + ink */
-  --color-paper: #ffffff;
-  --color-bone: #f8f6f2;
-  --color-sand: #efeae0;
-  --color-mist: #e7e3da;
-  --color-line: #e2ddd2;
-  --color-line-soft: #ece8e0;
-  --color-ink: #17181a;
-  --color-ink-soft: #33353a;
-  --color-graphite: #5c5e63;
-  --color-muted: #7c7a75;
+  /* Surfaces + ink — a cream shop, so the neutrals are warm, never grey-blue.
+     `paper` is a card, `bone` the page, `sand` a quiet band, and the ink scale is
+     a warm near-black that sits calmly on cream. */
+  --color-paper: #fffdfa;
+  --color-bone: #fdf7ec;
+  --color-sand: #f6ecda;
+  --color-mist: #efe3ce;
+  --color-line: #e8d9c2;
+  --color-line-soft: #f2e7d6;
+  --color-ink: #1c1a17;
+  --color-ink-soft: #3a342c;
+  --color-graphite: #5f564a;
+  --color-muted: #8c8172;
 
-  /* Single accent: aged brass. Used for focus, active filters, sale, CTAs on dark. */
-  --color-brass: #8a6b45;
-  --color-brass-deep: #6f5535;
-  --color-brass-tint: #f3ece1;
+  /* One accent: marigold. It means "act here" — focus rings, sale, active filters,
+     the odd CTA on dark. The token keeps its old `brass` name so nothing in the
+     component tree has to be hunted down and renamed. */
+  --color-brass: #d1600d;
+  --color-brass-deep: #a94b06;
+  --color-brass-tint: #fdecd8;
 
-  /* Feedback */
-  --color-good: #2f6b4f;
-  --color-good-tint: #e8f1eb;
-  --color-warn: #9a6a1c;
-  --color-warn-tint: #f7eeda;
-  --color-bad: #a13c2c;
-  --color-bad-tint: #f8e9e5;
+  /* Feedback. Green is only ever used for something that went right. */
+  --color-good: #226b4d;
+  --color-good-tint: #e5f0e6;
+  --color-warn: #b06a12;
+  --color-warn-tint: #fbeeda;
+  --color-bad: #a4382a;
+  --color-bad-tint: #fbe9e4;
 
   --radius-xs: 3px;
   --radius-sm: 5px;
@@ -41,10 +45,10 @@
   --radius-lg: 12px;
   --radius-xl: 16px;
 
-  --shadow-hair: 0 1px 0 rgba(23, 24, 26, 0.04);
-  --shadow-card: 0 1px 2px rgba(23, 24, 26, 0.04), 0 10px 30px -22px rgba(23, 24, 26, 0.35);
-  --shadow-lift: 0 2px 6px rgba(23, 24, 26, 0.05), 0 22px 44px -26px rgba(23, 24, 26, 0.4);
-  --shadow-drawer: -24px 0 60px -30px rgba(23, 24, 26, 0.45);
+  --shadow-hair: 0 1px 0 rgba(28, 26, 23, 0.05);
+  --shadow-card: 0 1px 2px rgba(28, 26, 23, 0.05), 0 10px 30px -22px rgba(28, 26, 23, 0.32);
+  --shadow-lift: 0 2px 6px rgba(28, 26, 23, 0.06), 0 22px 44px -26px rgba(28, 26, 23, 0.38);
+  --shadow-drawer: -24px 0 60px -30px rgba(28, 26, 23, 0.42);
 
   --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);

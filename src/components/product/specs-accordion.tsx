@@ -20,7 +20,7 @@ export function SpecsAccordion({ product }: { product: Product }) {
       <Item title="What it is" defaultOpen>
         <p className="text-[14px] leading-[1.75] text-graphite">
           {product.description ??
-            "A piece from the Aakash Men's Wear rail — cut in our pattern room, checked on the table before it is folded, and sent in the size you picked."}
+            "A piece from the Mens Wear rail — cut in our pattern room, checked on the table before it is folded, and sent in the size you picked."}
         </p>
         {specs.length > 0 ? (
           <dl className="mt-5 grid gap-x-8 gap-y-3 sm:grid-cols-2">

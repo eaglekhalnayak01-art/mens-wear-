@@ -31,7 +31,27 @@ export type CheckoutSettings = {
   deliveryDaysMax: number;
   whatsapp: string;
   shopName: string;
+  /** How online payment works today: a UPI id + QR the owner uploaded, or a gateway. */
+  onlineMode?: "gateway" | "qr" | "off";
+  upiId?: string;
+  upiPayeeName?: string;
+  upiQrImage?: string | null;
+  paymentInstructions?: string;
+  utrRequired?: boolean;
 };
+
+/** A UPI deep link: opens GPay/PhonePe/Paytm with the amount and note filled in. */
+function upiIntent(settings: CheckoutSettings, total: number) {
+  if (!settings.upiId) return null;
+  const params = new URLSearchParams({
+    pa: settings.upiId,
+    pn: settings.upiPayeeName || settings.shopName,
+    cu: "INR",
+  });
+  if (total > 0) params.set("am", String(total));
+  params.set("tn", `Order ${settings.shopName}`);
+  return `upi://pay?${params.toString()}`;
+}
 
 type Form = {
   name: string;
@@ -87,6 +107,7 @@ export function CheckoutFlow({ settings }: { settings: CheckoutSettings }) {
   const [quoting, setQuoting] = useState(true);
   const [placing, setPlacing] = useState(false);
   const [payment, setPayment] = useState<"cod" | "online">("cod");
+  const [utr, setUtr] = useState("");
 
   const [hydrated, setHydrated] = useState(false);
   const firstError = useRef<HTMLDivElement>(null);
@@ -205,6 +226,15 @@ export function CheckoutFlow({ settings }: { settings: CheckoutSettings }) {
   };
 
   const placeOrder = async () => {
+    // A prepaid order without a reference is a phone call waiting to happen, so when
+    // the shop switched this on we ask before the request goes out.
+    if (payment === "online" && settings.utrRequired && utr.trim().length < 6) {
+      setStep(CHECKOUT_STEPS.findIndex((entry) => entry.id === "payment"));
+      setErrors((current) => ({ ...current, paymentReference: "Type the UPI reference (UTR) from your payment app." }));
+      setBanner("We need the UPI reference before we can confirm a prepaid order.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     setPlacing(true);
     setBanner(null);
     try {
@@ -221,6 +251,7 @@ export function CheckoutFlow({ settings }: { settings: CheckoutSettings }) {
           landmark: form.landmark.trim() || undefined,
         },
         paymentMethod: payment,
+        paymentReference: payment === "online" ? utr.trim() || undefined : undefined,
         notes: form.notes.trim() || undefined,
         saveAddress: customer ? form.saveAddress : false,
         items: lines,
@@ -342,7 +373,15 @@ export function CheckoutFlow({ settings }: { settings: CheckoutSettings }) {
                 settings={settings}
               />
             ) : (
-              <StepPayment settings={settings} payment={payment} setPayment={setPayment} totals={shown} />
+              <StepPayment
+                settings={settings}
+                payment={payment}
+                setPayment={setPayment}
+                totals={shown}
+                utr={utr}
+                setUtr={setUtr}
+                error={errors.utr ?? errors.paymentReference}
+              />
             )}
 
             <div className="mt-7 flex flex-wrap items-center gap-2.5">
@@ -623,69 +662,153 @@ function StepPayment({
   payment,
   setPayment,
   totals,
+  utr,
+  setUtr,
+  error,
 }: {
   settings: CheckoutSettings;
   payment: "cod" | "online";
   setPayment: (value: "cod" | "online") => void;
   totals: QuoteTotals;
+  utr: string;
+  setUtr: (value: string) => void;
+  error?: string;
 }) {
+  const qrMode = settings.onlineMode === "qr" && Boolean(settings.upiId);
+  const onlineAvailable = settings.onlineEnabled && (qrMode || settings.onlineMode === "gateway");
   const options = [
     {
       id: "cod" as const,
       title: "Cash on delivery",
       text: `Pay ${money(totals.total ?? 0)} in cash when the parcel arrives. Keep the exact amount ready — delivery partners rarely carry change.`,
-      available: settings.codEnabled,
+      available: settings.codEnabled && totals.allowsCod !== false,
+      unavailable:
+        totals.allowsCod === false
+          ? "Not available — one of your items is prepaid only."
+          : "We are not taking cash-on-delivery orders right now.",
       badge: settings.codFee > 0 ? `+ ${money(settings.codFee)} handling` : "No extra charge",
     },
     {
       id: "online" as const,
-      title: "UPI, card or net banking",
-      text: settings.onlineEnabled
-        ? "You will be handed to the payment gateway and brought straight back here."
-        : "We are finishing the gateway setup. For now choose cash on delivery, or pay on WhatsApp after we confirm your order.",
-      available: settings.onlineEnabled,
-      badge: settings.onlineEnabled ? undefined : "Coming soon",
+      title: qrMode ? "Pay by UPI to our QR" : "UPI, card or net banking",
+      text: onlineAvailable
+        ? qrMode
+          ? "Scan the QR below in any UPI app, pay the exact total, then type the reference number here. We confirm within a few hours."
+          : "You will be handed to the payment gateway and brought straight back here."
+        : "Online payment is being set up. Choose cash on delivery, or we will send a payment link on WhatsApp.",
+      available: onlineAvailable && totals.allowsOnline !== false,
+      unavailable:
+        totals.allowsOnline === false
+          ? "Not available — one of your items is cash on delivery only."
+          : "Online payment is not open yet.",
+      badge: onlineAvailable ? (qrMode ? "Instant confirmation" : undefined) : "Coming soon",
     },
   ];
+
+  const intent = upiIntent(settings, totals.total ?? 0);
 
   return (
     <div className="space-y-3">
       {options.map((option) => {
         const disabled = !option.available;
         return (
-          <label
-            key={option.id}
-            className={cn(
-              "flex cursor-pointer gap-3.5 rounded-[var(--radius-md)] border p-4 transition-colors sm:p-5",
-              payment === option.id && !disabled ? "border-ink bg-paper" : "border-line bg-paper hover:border-ink/60",
-              disabled && "cursor-not-allowed opacity-60 hover:border-line",
-            )}
-          >
-            <input
-              type="radio"
-              name="payment"
-              className="mt-1 h-4 w-4 shrink-0 accent-[#17181a]"
-              checked={payment === option.id && !disabled}
-              disabled={disabled}
-              onChange={() => setPayment(option.id)}
-            />
-            <span className="min-w-0">
-              <span className="flex flex-wrap items-center gap-2 text-[14px] font-semibold text-ink">
-                {option.title}
-                {option.badge ? (
-                  <span className={cn("rounded-full px-2 py-[3px] text-[10.5px] font-semibold uppercase tracking-[0.06em]", disabled ? "bg-sand text-muted" : "bg-brass-tint text-brass-deep")}>
-                    {option.badge}
+          <div key={option.id} className="space-y-3">
+            <label
+              className={cn(
+                "flex cursor-pointer gap-3.5 rounded-[var(--radius-md)] border p-4 transition-colors sm:p-5",
+                payment === option.id && !disabled ? "border-ink bg-paper" : "border-line bg-paper hover:border-ink/60",
+                disabled && "cursor-not-allowed opacity-60 hover:border-line",
+              )}
+            >
+              <input
+                type="radio"
+                name="payment"
+                className="mt-1 h-4 w-4 shrink-0 accent-[color:var(--color-brass)]"
+                checked={payment === option.id && !disabled}
+                disabled={disabled}
+                onChange={() => setPayment(option.id)}
+              />
+              <span className="min-w-0">
+                <span className="flex flex-wrap items-center gap-2 text-[14px] font-semibold text-ink">
+                  {option.title}
+                  {option.badge ? (
+                    <span className={cn("rounded-full px-2 py-[3px] text-[10.5px] font-semibold uppercase tracking-[0.06em]", disabled ? "bg-sand text-muted" : "bg-brass-tint text-brass-deep")}>
+                      {option.badge}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="mt-1.5 block text-[13px] leading-relaxed text-muted">{option.text}</span>
+                {disabled && option.unavailable ? (
+                  <span className="mt-2.5 inline-flex items-center gap-1.5 text-[12px] text-graphite">
+                    <IconAlert size={13} className="text-brass" /> {option.unavailable}
                   </span>
                 ) : null}
               </span>
-              <span className="mt-1.5 block text-[13px] leading-relaxed text-muted">{option.text}</span>
-              {disabled && option.id === "online" ? (
-                <span className="mt-2.5 inline-flex items-center gap-1.5 text-[12px] text-graphite">
-                  <IconTruck size={13} className="text-brass" /> Meanwhile: we accept UPI on WhatsApp after confirming the order.
-                </span>
-              ) : null}
-            </span>
-          </label>
+            </label>
+
+            {option.id === "online" && payment === "online" && qrMode ? (
+              <div className="rounded-[var(--radius-md)] border border-brass/35 bg-bone p-4 sm:p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brass-deep">
+                  Pay {money(totals.total ?? 0)} to {settings.shopName}
+                </p>
+                <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start">
+                  {settings.upiQrImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={settings.upiQrImage}
+                      alt={`${settings.shopName} UPI payment QR code`}
+                      className="h-[168px] w-[168px] shrink-0 rounded-[var(--radius-sm)] border border-line bg-white object-contain p-2"
+                    />
+                  ) : (
+                    <div className="flex h-[168px] w-[168px] shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-line bg-paper px-4 text-center text-[11.5px] leading-relaxed text-muted">
+                      The shop has not uploaded a QR image yet — pay to the UPI id below from any UPI app.
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1 space-y-3">
+                    <CopyRow label="UPI ID" value={settings.upiId ?? ""} />
+                    {settings.upiPayeeName ? <p className="text-[12.5px] text-graphite">Payee name: {settings.upiPayeeName}</p> : null}
+                    {settings.paymentInstructions ? (
+                      <p className="whitespace-pre-line text-[12.5px] leading-relaxed text-graphite">{settings.paymentInstructions}</p>
+                    ) : null}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {intent ? (
+                        <a
+                          href={intent}
+                          className="inline-flex h-9 items-center rounded-full bg-ink px-4 text-[12.5px] font-semibold text-paper transition-colors hover:bg-brass"
+                        >
+                          Open UPI app
+                        </a>
+                      ) : null}
+                      <span className="text-[11.5px] text-muted">On a phone this opens Google Pay, PhonePe or Paytm with the amount filled in.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 border-t border-line pt-4">
+                  <label htmlFor="utr" className="flex items-baseline justify-between gap-3 text-[12.5px] font-medium text-ink-soft">
+                    <span>
+                      UPI reference / UTR
+                      {settings.utrRequired ? <span className="ml-0.5 text-bad">*</span> : null}
+                    </span>
+                    {settings.utrRequired ? null : <span className="text-[11px] font-normal text-muted">Optional</span>}
+                  </label>
+                  <Input
+                    id="utr"
+                    className="mt-1.5"
+                    value={utr}
+                    onChange={(event) => setUtr(event.target.value.replace(/[^0-9A-Za-z-]/g, "").slice(0, 40))}
+                    placeholder="e.g. 448392017745"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    invalid={Boolean(error)}
+                  />
+                  <p className="mt-1.5 text-[12px] leading-snug text-muted">
+                    {error ?? "The reference in your UPI app under “Transaction id”. It helps us find your payment and confirm sooner."}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+          </div>
         );
       })}
 
@@ -769,6 +892,29 @@ function SummaryCard({
         Prices include GST. Your details go to our packing table and the courier — nothing else.
       </p>
     </aside>
+  );
+}
+
+function CopyRow({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">{label}</span>
+      <span className="rounded-[var(--radius-sm)] border border-line bg-paper px-2.5 py-1 font-mono text-[13px] text-ink">{value}</span>
+      <button
+        type="button"
+        onClick={() => {
+          void navigator.clipboard?.writeText(value).then(
+            () => setCopied(true),
+            () => setCopied(false),
+          );
+          window.setTimeout(() => setCopied(false), 1800);
+        }}
+        className="text-[12px] font-semibold text-brass-deep underline decoration-brass/40 underline-offset-2 hover:text-brass"
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
   );
 }
 

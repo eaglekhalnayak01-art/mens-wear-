@@ -13,9 +13,9 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: "Contact & directions",
   description:
-    "Call, WhatsApp or write to Aakash Men's Wear in Surat. Shop hours, directions, bulk enquiries and order help — a real person answers all of it.",
+    "Call, WhatsApp or write to Mens Wear in Surat. Shop hours, directions, bulk enquiries and order help — a real person answers all of it.",
   alternates: { canonical: "/contact" },
-  openGraph: { title: "Contact Aakash Men's Wear", url: absoluteUrl("/contact") },
+  openGraph: { title: "Contact Mens Wear", url: absoluteUrl("/contact") },
 };
 
 export default function ContactPage() {

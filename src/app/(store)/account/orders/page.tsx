@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Your orders",
-  description: "Everything you have ordered from Aakash Men's Wear, with live status for each one.",
+  description: "Everything you have ordered from Mens Wear, with live status for each one.",
   robots: { index: false, follow: false },
 };
 

@@ -56,8 +56,9 @@ export default async function AdminLoginPage({ searchParams }: { searchParams: S
             <AdminLoginForm next={next ?? "/admin"} />
           </div>
           <p className="mt-5 text-[11.5px] leading-relaxed text-muted">
-            Demo account for this build: <span className="nums">admin@aakashmenswear.in</span> / <span className="nums">Aakash@2026</span>. Change it before
-            this goes anywhere public.
+            One owner account, created on the shop machine with{" "}
+            <code className="nums rounded bg-sand px-1 py-0.5 text-[10.5px]">npm run admin:set</code>. There is no shared demo login, and five wrong
+            passwords pause this account before an attacker can try a sixth.
           </p>
         </div>
       </section>

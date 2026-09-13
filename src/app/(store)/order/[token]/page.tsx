@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title: order ? `Order ${order.publicRef}` : "Track your order",
     description: order
-      ? `Status, delivery address and timeline for order ${order.publicRef} at Aakash Men's Wear.`
+      ? `Status, delivery address and timeline for order ${order.publicRef} at Mens Wear.`
       : "Enter your order reference and mobile number to see where your parcel is.",
     robots: { index: false, follow: false },
     openGraph: { title: `Order ${order?.publicRef ?? ""}`, url: absoluteUrl(`/order/${token}`) },
@@ -202,7 +202,15 @@ export default async function OrderPage({ params }: { params: Params }) {
                 <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
                   Keep {money(order.total)} ready. The partner rarely carries change, and we cannot accept a partial payment.
                 </p>
-              ) : null}
+              ) : order.paymentStatus === "paid" ? (
+                <p className="mt-2 text-[12.5px] leading-relaxed text-good">Payment confirmed — thank you. We are packing it.</p>
+              ) : (
+                <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
+                  {order.paymentReference
+                    ? `We have your reference ${order.paymentReference}. It turns to paid as soon as the amount is matched in the shop's UPI account — usually within a few hours.`
+                    : "We will send you a UPI link on WhatsApp to complete the payment, and confirm the order right after."}
+                </p>
+              )}
             </section>
 
             {order.notes ? (

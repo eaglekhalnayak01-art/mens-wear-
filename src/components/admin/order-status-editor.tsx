@@ -20,18 +20,42 @@ export function OrderStatusEditor({
   status,
   paymentStatus,
   canCancel,
+  paymentMethod,
+  paymentReference,
+  shopName,
 }: {
   orderId: number;
   status: string;
   paymentStatus: string;
   canCancel: boolean;
+  paymentMethod?: string;
+  paymentReference?: string | null;
+  shopName?: string;
 }) {
   const router = useRouter();
   const toast = useToast();
   const [choice, setChoice] = useState<OrderStatus>(status as OrderStatus);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [payBusy, setPayBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const markPayment = async (next: "paid" | "pending" | "failed") => {
+    setPayBusy(true);
+    try {
+      await api.patch(`/api/admin/orders/${orderId}/payment`, { status: next });
+      toast.push({
+        title: next === "paid" ? "Marked paid" : next === "failed" ? "Payment marked failed" : "Payment put back to pending",
+        description: next === "paid" ? "The customer sees it as paid on their tracking page." : "The delivery status was not changed.",
+        tone: next === "paid" ? "good" : "info",
+      });
+      router.refresh();
+    } catch (caught) {
+      toast.push({ title: "Could not record that", description: caught instanceof ApiError ? caught.message : "Network problem.", tone: "bad" });
+    } finally {
+      setPayBusy(false);
+    }
+  };
 
   const dirty = choice !== status || note.trim().length > 0;
 
@@ -137,10 +161,52 @@ export function OrderStatusEditor({
         ) : null}
       </div>
 
-      <p className="border-t border-line pt-3 text-[11.5px] leading-relaxed text-muted">
-        Payment: <span className={cn("font-medium", paymentStatus === "paid" ? "text-good" : paymentStatus === "failed" ? "text-bad" : "text-ink")}>{paymentStatus}</span>
-        {" · "}cancelling from here puts every piece back on the shelf.
-      </p>
+      <div className="border-t border-line pt-3">
+        <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-muted">
+          <span className="admin-section-title">Payment</span>
+          <span
+            className={cn(
+              "nums rounded-full px-2 py-[3px] text-[11px] font-medium",
+              paymentStatus === "paid" ? "bg-good-tint text-good" : paymentStatus === "failed" ? "bg-bad-tint text-bad" : "bg-sand text-graphite",
+            )}
+          >
+            {paymentMethod === "cod" ? "cash on delivery" : "UPI / online"} · {paymentStatus}
+          </span>
+        </div>
+
+        {paymentReference ? (
+          <p className="mt-2 rounded-[var(--radius-sm)] bg-brass-tint px-2.5 py-2 text-[11.5px] leading-relaxed text-brass-deep">
+            The customer says they paid. UPI reference{" "}
+            <span className="nums font-semibold text-ink">{paymentReference}</span> — match it in your {shopName ?? "shop"} UPI statement, then mark it paid here.
+          </p>
+        ) : null}
+
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {([
+            ["paid", "Mark paid"],
+            ["pending", paymentMethod === "cod" ? "Awaiting cash" : "Awaiting payment"],
+            ["failed", "Payment failed"],
+          ] as const).map(([next, label]) => (
+            <button
+              key={next}
+              type="button"
+              disabled={payBusy || paymentStatus === next}
+              onClick={() => void markPayment(next)}
+              className={cn(
+                "admin-chip h-8 px-2.5 text-[11.5px] transition-colors",
+                paymentStatus === next && "cursor-default opacity-55",
+                next !== "paid" && "hover:border-bad/40 hover:text-bad",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <p className="mt-2 text-[11.5px] leading-relaxed text-muted">
+          Recording money does not move the parcel — and cancelling from here puts every piece back on the shelf.
+        </p>
+      </div>
     </form>
   );
 }

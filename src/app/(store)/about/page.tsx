@@ -17,9 +17,9 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: "About the shop",
   description:
-    "Aakash Men's Wear buys its own fabric, cuts in its own pattern room and checks every piece before it is folded. Since 2014 on Station Road, and online across India.",
+    "Mens Wear buys its own fabric, cuts in its own pattern room and checks every piece before it is folded. Since 2014 on Station Road, and online across India.",
   alternates: { canonical: "/about" },
-  openGraph: { title: "About Aakash Men's Wear", description: "A shop that knows its cloth.", url: absoluteUrl("/about") },
+  openGraph: { title: "About Mens Wear", description: "A shop that knows its cloth.", url: absoluteUrl("/about") },
 };
 
 const PROCESS = [

@@ -27,6 +27,10 @@ export type ProductFormInitial = {
   compareAtPrice: number | null;
   sku: string;
   status: "published" | "hidden" | "draft";
+  paymentMode: "both" | "cod" | "online";
+  deliveryDays: string;
+  rating: string;
+  ratingCount: string;
   isFeatured: boolean;
   isNewArrival: boolean;
   isBestseller: boolean;
@@ -66,6 +70,10 @@ export function ProductForm({
     sku: initial.sku,
     status: initial.status,
     lowStockThreshold: String(initial.lowStockThreshold),
+    paymentMode: initial.paymentMode,
+    deliveryDays: initial.deliveryDays,
+    rating: initial.rating,
+    ratingCount: initial.ratingCount,
   });
   const [categoryId, setCategoryId] = useState<number | null>(initial.categoryId);
   const [flags, setFlags] = useState({ isFeatured: initial.isFeatured, isNewArrival: initial.isNewArrival, isBestseller: initial.isBestseller });
@@ -102,6 +110,8 @@ export function ProductForm({
     if (variants.sizes.length === 0) local.sizes = "At least one size, even if it is “Free”.";
     if (variants.colors.length === 0) local.colors = "At least one colour name.";
     if (media.length === 0) local.images = "Add at least one photo — a product with no picture cannot sell.";
+    if (values.rating && (Number(values.rating) < 0 || Number(values.rating) > 5)) local.rating = "Ratings run from 0 to 5.";
+    if (values.deliveryDays && Number(values.deliveryDays) > 120) local.deliveryDays = "That is over four months — check the number.";
     setErrors(local);
     if (Object.keys(local).length > 0) {
       document.getElementById("admin-main")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -125,6 +135,10 @@ export function ProductForm({
       isNewArrival: flags.isNewArrival,
       isBestseller: flags.isBestseller,
       lowStockThreshold: Number(values.lowStockThreshold) || 0,
+      paymentMode: values.paymentMode,
+      deliveryDays: values.deliveryDays ? Number(values.deliveryDays) : null,
+      rating: values.rating ? Number(values.rating) : null,
+      ratingCount: values.ratingCount ? Number(values.ratingCount) : 0,
       sizes: variants.sizes,
       colors: variants.colors,
       variants: variants.stock.length > 0 ? variants.stock : variants.sizes.flatMap((size) => variants.colors.map((color) => ({ size, color: color.name, stock: 0 }))),
@@ -176,7 +190,7 @@ export function ProductForm({
             <Input id="p-sub" value={values.subCategory} onChange={(event) => set("subCategory", event.target.value)} invalid={Boolean(errors.subCategory)} placeholder="Ethnic wear" />
           </Field>
           <Field label="Brand" optionalLabel htmlFor="p-brand" error={errors.brand} hint="Your in-house label is fine.">
-            <Input id="p-brand" value={values.brand} onChange={(event) => set("brand", event.target.value)} invalid={Boolean(errors.brand)} placeholder="Aakash Signature" />
+            <Input id="p-brand" value={values.brand} onChange={(event) => set("brand", event.target.value)} invalid={Boolean(errors.brand)} placeholder="Mens Wear Signature" />
           </Field>
           <Field label="SKU" optionalLabel htmlFor="p-sku" error={errors.sku} hint="Left blank, we build one from the category and name.">
             <Input id="p-sku" value={values.sku} onChange={(event) => set("sku", event.target.value)} invalid={Boolean(errors.sku)} placeholder="AMW-BAN-01" />
@@ -261,6 +275,27 @@ export function ProductForm({
               <Input id="p-care" value={values.care} onChange={(event) => set("care", event.target.value)} invalid={Boolean(errors.care)} placeholder="Dry clean only. Store on a wide hanger." />
             </Field>
           </div>
+        </div>
+      </Section>
+
+      <Section title="Payment, delivery and rating" hint="Cash or advance for this style, how long it takes, and the stars you want shown until customers review it.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Payment accepted" htmlFor="p-payment" hint="Chosen at checkout. A basket can only use a method every item in it accepts.">
+            <Select id="p-payment" value={values.paymentMode} onChange={(event) => set("paymentMode", event.target.value as typeof values.paymentMode)}>
+              <option value="both">Cash on delivery and online</option>
+              <option value="cod">Cash on delivery only</option>
+              <option value="online">Online / advance payment only</option>
+            </Select>
+          </Field>
+          <Field label="Days to deliver" htmlFor="p-delivery" optionalLabel error={errors.deliveryDays} hint="Empty uses the shop-wide window on the settings page.">
+            <Input id="p-delivery" inputMode="numeric" value={values.deliveryDays} onChange={(event) => set("deliveryDays", event.target.value.replace(/\D/g, ""))} invalid={Boolean(errors.deliveryDays)} placeholder="5" />
+          </Field>
+          <Field label="Rating shown on the card" htmlFor="p-rating" optionalLabel error={errors.rating} hint="0 to 5, one decimal. Real customer reviews will overwrite it once they arrive.">
+            <Input id="p-rating" inputMode="decimal" value={values.rating} onChange={(event) => set("rating", event.target.value.replace(/[^\d.]/g, ""))} invalid={Boolean(errors.rating)} placeholder="4.6" />
+          </Field>
+          <Field label="How many people rated it" htmlFor="p-rating-count" optionalLabel error={errors.ratingCount}>
+            <Input id="p-rating-count" inputMode="numeric" value={values.ratingCount} onChange={(event) => set("ratingCount", event.target.value.replace(/\D/g, ""))} invalid={Boolean(errors.ratingCount)} placeholder="48" />
+          </Field>
         </div>
       </Section>
 

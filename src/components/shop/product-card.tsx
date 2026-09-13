@@ -5,6 +5,7 @@ import { useState } from "react";
 import { SafeImage } from "@/components/ui/safe-image";
 import { Badge } from "@/components/ui/badge";
 import { Price } from "@/components/ui/price";
+import { Stars } from "@/components/ui/stars";
 import { IconBag, IconCheck } from "@/components/ui/icons";
 import { useCart } from "@/components/cart/cart-provider";
 import { useToast } from "@/components/ui/toast";
@@ -115,6 +116,15 @@ export function ProductCard({ product, priority = false, compact = false }: { pr
               {product.name}
             </Link>
           </h3>
+          {product.rating && product.ratingCount > 0 ? (
+            <p className="mt-1 flex items-center gap-1.5">
+              <Stars value={product.rating} count={product.ratingCount} size={11} />
+            </p>
+          ) : product.paymentMode !== "both" ? (
+            <p className="mt-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-brass-deep">
+              {product.paymentMode === "online" ? "Advance only" : "Cash on delivery only"}
+            </p>
+          ) : null}
         </div>
         {product.colors.length > 0 ? (
           <span className="mt-1 flex shrink-0 items-center gap-1" title={product.colors.map((c) => c.name).join(", ")}>

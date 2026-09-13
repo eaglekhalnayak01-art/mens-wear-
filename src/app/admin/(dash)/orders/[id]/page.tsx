@@ -182,7 +182,15 @@ export default async function AdminOrderDetailPage({ params }: { params: Params 
 
           <div className="space-y-4">
             <section className="admin-card p-5 print:hidden">
-              <OrderStatusEditor orderId={order.id} status={order.status} paymentStatus={order.paymentStatus} canCancel={canCancel(order.status as OrderStatus)} />
+              <OrderStatusEditor
+                orderId={order.id}
+                status={order.status}
+                paymentStatus={order.paymentStatus}
+                canCancel={canCancel(order.status as OrderStatus)}
+                paymentMethod={order.paymentMethod}
+                paymentReference={order.paymentReference}
+                shopName={settings.shopName}
+              />
             </section>
 
             <section className="admin-card p-5">

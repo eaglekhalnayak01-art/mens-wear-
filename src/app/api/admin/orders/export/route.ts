@@ -61,7 +61,7 @@ export const GET = handle({ auth: "admin", query: orderFilterSchema }, async ({ 
   return new NextResponse(`\uFEFF${csv}`, {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="aakash-orders-${stamp}.csv"`,
+      "content-disposition": `attachment; filename="mens-wear-orders-${stamp}.csv"`,
       "cache-control": "no-store",
     },
   });

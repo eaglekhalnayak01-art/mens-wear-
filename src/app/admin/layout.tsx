@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "../admin.css";
 
 export const metadata: Metadata = {
-  title: { default: "Owner dashboard", template: "%s · Aakash Men's Wear admin" },
+  title: { default: "Owner dashboard", template: "%s · Mens Wear admin" },
   robots: { index: false, follow: false },
 };
 

@@ -83,7 +83,15 @@ const settingsToWrite = {
   minOrderValue: 499,
   codFee: 0,
   codEnabled: true,
-  onlineEnabled: false,
+  onlineEnabled: true,
+  // A shop with no gateway account still takes advance payment: its own UPI id + QR.
+  onlineMode: "qr",
+  upiId: "menswear@okhdfcbank",
+  upiPayeeName: storeProfile.shopName,
+  paymentInstructions: "Pay the exact total in one go. We confirm on WhatsApp within an hour, and pack the same evening.",
+  utrRequired: false,
+  notifyOrderEnabled: true,
+  notifyMobile: storeProfile.whatsapp,
   dispatchDays: 2,
   deliveryDaysMin: 3,
   deliveryDaysMax: 6,
@@ -92,7 +100,8 @@ const settingsToWrite = {
   announcementEnabled: true,
   gstNumber: "24ABCDE1135F1Z5",
   gstState: "Gujarat",
-  logoText: "A",
+  logoText: "M",
+  whatsappGreeting: storeProfile.whatsappGreeting,
 };
 const writeSetting = db.prepare(
   `INSERT INTO settings (key, value, type, updated_at) VALUES (?,?,?,?)
@@ -164,10 +173,10 @@ const insertProduct = db.prepare(
   `INSERT INTO products
      (name, slug, category_id, sub_category, brand, description, fabric, care, price, compare_at_price,
       sku, status, is_featured, is_new_arrival, is_bestseller, low_stock_threshold, sold_qty,
-      rating, rating_count, created_at, updated_at, published_at)
+      rating, rating_count, payment_mode, delivery_days, created_at, updated_at, published_at)
    VALUES (@name,@slug,@category_id,@sub_category,@brand,@description,@fabric,@care,@price,@compare_at_price,
            @sku,'published',@is_featured,@is_new_arrival,@is_bestseller,@low_stock_threshold,@sold_qty,
-           @rating,@rating_count,@created_at,@created_at,@created_at)`,
+           @rating,@rating_count,@payment_mode,@delivery_days,@created_at,@created_at,@created_at)`,
 );
 
 const productRowIds = new Map();
@@ -196,6 +205,8 @@ products.forEach((product, index) => {
     is_bestseller: product.bestseller ? 1 : 0,
     low_stock_threshold: product.lowStock ?? 6,
     sold_qty: sold,
+    payment_mode: product.pay === "cod" || product.pay === "online" ? product.pay : "both",
+    delivery_days: product.days ?? null,
     rating: product.rating ?? (4.1 + ((index * 7) % 9) / 10),
     rating_count: product.ratingCount ?? 4 + ((index * 13) % 46),
     created_at: created,
@@ -251,18 +262,29 @@ products.forEach((product, index) => {
 db.exec("COMMIT");
 
 // ------------------------------------------------------------------- owner account
-const adminEmail = process.env.ADMIN_EMAIL || "admin@aakashmenswear.in";
-const adminPassword = process.env.ADMIN_PASSWORD || "Aakash@2026";
-const adminName = process.env.ADMIN_NAME || "Aakash Verma";
+// The owner login is never hardcoded. Give it in .env.local (ADMIN_EMAIL /
+// ADMIN_PASSWORD / ADMIN_NAME); without a password this generates one and prints it
+// once, in the terminal — the only place it ever exists.
+const adminEmail = (process.env.ADMIN_EMAIL || "owner@menswear.local").toLowerCase();
+const adminName = process.env.ADMIN_NAME || "Owner";
+const adminPassword = process.env.ADMIN_PASSWORD || crypto.randomBytes(9).toString("base64url");
 
 if (!db.prepare(`SELECT id FROM admin_users WHERE lower(email) = lower(?)`).get(adminEmail)) {
   db.prepare(`INSERT INTO admin_users (name, email, password_hash, role, created_at) VALUES (?,?,?,?,?)`).run(
     adminName,
-    adminEmail.toLowerCase(),
+    adminEmail,
     hashPassword(adminPassword),
     "owner",
     daysAgo(420),
   );
+  console.log(
+    "\n  Owner dashboard login\n" +
+      `  \u251C\u2500 email     ${adminEmail}\n` +
+      `  \u2514\u2500 password  ${process.env.ADMIN_PASSWORD ? "(from ADMIN_PASSWORD in your environment)" : adminPassword + "   \u2190 printed once, save it now"}\n` +
+      "\n  Change it any time with: npm run admin:set\n",
+  );
+} else {
+  console.log(`\n  Owner login already exists for ${adminEmail} — left as it is.\n`);
 }
 
 // ------------------------------------------------ customers + addresses + orders
@@ -286,7 +308,7 @@ if (!CATALOGUE_ONLY) {
         customer.mobile,
         customer.name,
         customer.email || null,
-        hashPassword("Aakash@2026"), // demo account: password login also works
+        null, // customers sign in with a one-time code only: there is no password to steal
         daysAgo(120 - i * 6),
         daysAgo(i % 9),
       );
@@ -411,7 +433,7 @@ if (!CATALOGUE_ONLY) {
         orderId,
         status,
         status === "placed"
-          ? "Order received by Aakash Men's Wear."
+          ? "Order received by Mens Wear." 
           : status === "cancelled"
             ? "Cancelled at the customer's request."
             : status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ") + ".",

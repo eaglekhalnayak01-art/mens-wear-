@@ -15,7 +15,7 @@ export default async function AdminDashLayout({ children }: { children: React.Re
 
   return (
     <div className="flex min-h-dvh">
-      <AdminSidebar shopName={settings.shopName} />
+      <AdminSidebar shopName={settings.shopName} logoImage={settings.logoImage} logoText={settings.logoText} />
       <main id="main" className="min-w-0 flex-1 pb-[76px] lg:pb-10">
         {children}
       </main>

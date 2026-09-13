@@ -30,7 +30,7 @@ export default function HomePage() {
         title={settings.heroTitle}
         subtitle={settings.heroSubtitle}
         image={settings.heroImage || "/images/hero-editorial.jpg"}
-        imageAlt="Model wearing a charcoal tailored suit from Aakash Men's Wear"
+        imageAlt="Model wearing a charcoal tailored suit from Mens Wear"
         foundedYear={settings.foundedYear}
         city={settings.city}
       />

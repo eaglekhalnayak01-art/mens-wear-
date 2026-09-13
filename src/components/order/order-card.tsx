@@ -53,7 +53,11 @@ export function OrderCard({ order, preview }: { order: OrderSummary; preview?: {
           </Link>
           <span className="text-[12px] text-muted">
             {order.paymentMethod === "cod" ? "Cash on delivery" : "Paid online"}
-            {order.paymentStatus === "pending" && order.paymentMethod === "cod" ? " · due on delivery" : ""}
+            {order.paymentStatus === "pending" && order.paymentMethod === "cod"
+              ? " · due on delivery"
+              : order.paymentStatus !== "paid" && order.paymentMethod === "online"
+                ? " · payment being checked"
+                : ""}
           </span>
         </div>
       </div>

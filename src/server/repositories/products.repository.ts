@@ -123,7 +123,8 @@ export const SELECT_FIELDS = `
          p.sub_category AS subCategory, p.description, p.fabric, p.care, p.sku,
          p.is_new_arrival AS isNewArrival, p.is_bestseller AS isBestseller, p.is_featured AS isFeatured,
          p.rating, p.rating_count AS ratingCount, p.low_stock_threshold AS lowStockThreshold,
-         p.sold_qty AS soldQty, p.status, p.created_at AS createdAt, p.updated_at AS updatedAt,
+         p.sold_qty AS soldQty, p.status, p.payment_mode AS paymentMode, p.delivery_days AS deliveryDays,
+         p.created_at AS createdAt, p.updated_at AS updatedAt,
          p.category_id AS categoryId,
          COALESCE(av.stock,0) AS stock,
          (SELECT src FROM product_images pi WHERE pi.product_id = p.id
@@ -149,6 +150,8 @@ export type RawProduct = {
   fabric: string | null;
   care: string | null;
   sku: string | null;
+  paymentMode?: string | null;
+  deliveryDays?: number | null;
   isNewArrival: number;
   isBestseller: number;
   isFeatured: number;
@@ -249,7 +252,7 @@ export function groupByProduct(rows: RawProduct[]): Enriched[] {
     }
     const gallery: ImageRef[] = is.length
       ? is.map((i) => ({ src: i.src, alt: i.alt ?? row.name }))
-      : [{ src: placeholderImage(row.slug), alt: `${row.name} by Aakash Men's Wear` }];
+      : [{ src: placeholderImage(row.slug), alt: `${row.name} by Mens Wear` }];
 
     return {
       sizes: [...sizeSet.keys()],
@@ -288,6 +291,8 @@ export function toCard(row: RawProduct, extra?: Enriched): ProductCard {
     colors: extra?.colors ?? [],
     stock: row.stock,
     inStock: row.stock > 0,
+    paymentMode: row.paymentMode === "cod" || row.paymentMode === "online" ? row.paymentMode : "both",
+    deliveryDays: typeof row.deliveryDays === "number" && row.deliveryDays > 0 ? row.deliveryDays : null,
     isNewArrival: !!row.isNewArrival,
     isBestseller: !!row.isBestseller,
     isFeatured: !!row.isFeatured,

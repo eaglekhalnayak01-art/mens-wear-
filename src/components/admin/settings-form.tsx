@@ -11,7 +11,7 @@ import { api, ApiError } from "@/lib/client-api";
 import { money } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
-type FieldType = "text" | "money" | "number" | "textarea" | "toggle" | "image" | "tel" | "email" | "url";
+type FieldType = "text" | "money" | "number" | "textarea" | "toggle" | "image" | "tel" | "email" | "url" | "select";
 
 type FieldDef = {
   key: string;
@@ -23,7 +23,8 @@ type FieldDef = {
   rows?: number;
   required?: boolean;
   /** Kept in sync with the server schema so a bad value is caught before a request. */
-  check?: "pin" | "mobile" | "gst" | "positive";
+  check?: "pin" | "mobile" | "gst" | "positive" | "upi";
+  options?: { value: string; label: string; text?: string }[];
 };
 
 type Group = { id: string; title: string; description: string; fields: FieldDef[] };
@@ -89,15 +90,48 @@ const GROUPS: Group[] = [
       { key: "deliveryFee", label: "Delivery charge", type: "money", check: "positive" },
       { key: "freeDeliveryOver", label: "Free delivery above", type: "money", check: "positive", hint: "0 switches the threshold off." },
       { key: "minOrderValue", label: "Minimum order value", type: "money", check: "positive", hint: "Checkout refuses baskets below this." },
-      { key: "codFee", label: "Cash-on-delivery fee", type: "money", check: "positive" },
-      { key: "codEnabled", label: "Allow cash on delivery", type: "toggle" },
-      { key: "onlineEnabled", label: "Allow online payment", type: "toggle", hint: "Leave off until a payment gateway is connected — checkout then shows a clear “pay at delivery” message." },
       { key: "dispatchDays", label: "Days to dispatch", type: "number", check: "positive" },
       { key: "deliveryDaysMin", label: "Fastest delivery (days)", type: "number", check: "positive" },
       { key: "deliveryDaysMax", label: "Slowest delivery (days)", type: "number", check: "positive" },
       { key: "returnWindowDays", label: "Return window (days)", type: "number", check: "positive" },
       { key: "gstNumber", label: "GSTIN", type: "text", check: "gst", placeholder: "24ABCDE1234F1Z5" },
       { key: "gstState", label: "GST state", type: "text", placeholder: "Gujarat" },
+    ],
+  },
+  {
+    id: "payments",
+    title: "Payment QR and online money",
+    description: "Where a customer pays when they do not pay cash. Put your own UPI id here — nothing is stored in the page code or on a CDN.",
+    fields: [
+      {
+        key: "onlineMode",
+        label: "How online payment is taken",
+        type: "select",
+        wide: true,
+        options: [
+          { value: "qr", label: "My UPI id and QR code", text: "Customers pay your account directly; you check the reference and mark the order paid." },
+          { value: "gateway", label: "Payment gateway (Razorpay)", text: "Needs API keys in the server environment file; the checkout then redirects instead of showing a QR." },
+        ],
+      },
+      { key: "onlineEnabled", label: "Offer online payment at checkout", type: "toggle", hint: "Off means customers only see cash on delivery." },
+      { key: "upiId", label: "UPI ID", type: "text", placeholder: "yourname@okhdfcbank", check: "upi", hint: "The same id you use in PhonePe, GPay or your bank app." },
+      { key: "upiPayeeName", label: "Name shown to the customer", type: "text", placeholder: "Mens Wear" },
+      { key: "upiQrImage", label: "Your QR code image", type: "image", wide: true, hint: "Screenshot or export the QR from your UPI app and upload it here. It is shown at checkout." },
+      { key: "paymentInstructions", label: "Lines the customer reads before paying", type: "textarea", rows: 3, wide: true, placeholder: "Pay the exact total. We confirm on WhatsApp within an hour." },
+      { key: "utrRequired", label: "Ask for the UPI reference (UTR)", type: "toggle", hint: "On: checkout will not continue without it. Off: the customer may type it, or skip." },
+      { key: "codEnabled", label: "Also allow cash on delivery", type: "toggle", wide: true },
+      { key: "codFee", label: "Cash-on-delivery fee", type: "money", check: "positive" },
+    ],
+  },
+  {
+    id: "alerts",
+    title: "Order alerts to you",
+    description: "Where a new order is announced. The dashboard bell keeps the list even if every channel is off.",
+    fields: [
+      { key: "notifyOrderEnabled", label: "Alert me when an order arrives", type: "toggle", wide: true },
+      { key: "notifyMobile", label: "Your mobile number", type: "tel", check: "mobile", placeholder: "9825041188", hint: "Ten digits. Used for the one-tap WhatsApp alert and for SMS when a sender is connected." },
+      { key: "notifyEmail", label: "Alert email", type: "email", placeholder: "you@yourshop.in" },
+      { key: "notifyWebhookUrl", label: "Webhook URL (optional)", type: "url", wide: true, placeholder: "https://hooks.example.com/mens-wear", hint: "Any SMS/WhatsApp business bridge can sit behind this. We POST the order details to it from the server." },
     ],
   },
   {
@@ -154,6 +188,7 @@ export function SettingsForm({ settings }: { settings: SettingsValues }) {
         if (field.check === "mobile" && String(raw ?? "").replace(/\D/g, "").length < 10) local[field.key] = "Needs a full 10-digit number.";
         if (field.check === "gst" && String(raw ?? "") && !/^[0-9A-Z]{15}$/.test(String(raw).toUpperCase())) local[field.key] = "A GSTIN is 15 characters, e.g. 24ABCDE1234F1Z5.";
         if (field.check === "positive" && String(raw ?? "") !== "" && (Number.isNaN(Number(raw)) || Number(raw) < 0)) local[field.key] = "Amounts are numbers in rupees — no symbols.";
+        if (field.check === "upi" && String(raw ?? "") && !/^[a-z0-9._@-]{4,64}$/i.test(String(raw).trim())) local[field.key] = "A UPI id looks like name@bank — no spaces.";
       }
     }
     setErrors(local);
@@ -299,6 +334,39 @@ function SettingField({
     );
   }
 
+  if (field.type === "select" && field.options) {
+    return (
+      <div className={cn("space-y-2", field.wide && "sm:col-span-2")}>
+        <span className="block text-[12.5px] font-medium text-ink">{field.label}</span>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {field.options.map((option) => (
+            <label
+              key={option.value}
+              className={cn(
+                "flex cursor-pointer items-start gap-2.5 rounded-[var(--radius-sm)] border px-3 py-2.5 transition-colors",
+                String(value ?? "") === option.value ? "border-ink bg-sand" : "border-line hover:border-ink/50",
+              )}
+            >
+              <input
+                type="radio"
+                name={id}
+                value={option.value}
+                checked={String(value ?? "") === option.value}
+                onChange={() => onChange(field.key, option.value)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-brass)]"
+              />
+              <span className="min-w-0">
+                <span className="block text-[12.5px] font-medium text-ink">{option.label}</span>
+                {option.text ? <span className="mt-0.5 block text-[11px] leading-snug text-muted">{option.text}</span> : null}
+              </span>
+            </label>
+          ))}
+        </div>
+        {field.hint ? <span className="block text-[11px] leading-snug text-muted">{field.hint}</span> : null}
+      </div>
+    );
+  }
+
   if (field.type === "image") {
     return (
       <div className="sm:col-span-2">
@@ -346,7 +414,7 @@ function normalise(settings: SettingsValues): Record<string, string | boolean> {
 /** Collapsed groups still tell you what is set, so you know where to click. */
 function previewFor(group: Group, values: Record<string, string | boolean>) {
   const parts = group.fields
-    .filter((field) => field.type !== "toggle" && field.type !== "image" && field.type !== "textarea")
+    .filter((field) => field.type !== "toggle" && field.type !== "image" && field.type !== "textarea" && field.type !== "select")
     .slice(0, 6)
     .map((field) => {
       const raw = String(values[field.key] ?? "").trim();

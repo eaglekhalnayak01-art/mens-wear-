@@ -49,6 +49,28 @@ function applySchema(handle: DbHandle) {
   const schemaPath = path.join(process.cwd(), "src", "server", "db", "schema.sql");
   if (!fs.existsSync(schemaPath)) return; // production `standalone` builds ship the db file only
   handle.raw.exec(fs.readFileSync(schemaPath, "utf8"));
+  addMissingColumns(handle);
+}
+
+/**
+ * SQLite has no `ADD COLUMN IF NOT EXISTS`, so an existing shop database gains new
+ * fields here rather than needing to be deleted and re-seeded. Cheap: one PRAGMA per
+ * table, once per process.
+ */
+const ADDITIONS: [table: string, column: string, ddl: string][] = [
+  ["products", "payment_mode", "TEXT NOT NULL DEFAULT 'both' CHECK (payment_mode IN ('both','cod','online'))"],
+  ["products", "delivery_days", "INTEGER"],
+  ["admin_users", "failed_attempts", "INTEGER NOT NULL DEFAULT 0"],
+  ["admin_users", "locked_until", "TEXT"],
+];
+
+function addMissingColumns(handle: DbHandle) {
+  for (const [table, column, ddl] of ADDITIONS) {
+    const rows = handle.raw.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!rows.length) continue; // table does not exist yet — schema.sql will make it
+    if (rows.some((row) => row.name === column)) continue;
+    handle.raw.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  }
 }
 
 function coerce(params: SqlValue[]): SqlValue[] {

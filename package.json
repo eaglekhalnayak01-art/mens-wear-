@@ -1,8 +1,8 @@
 {
-  "name": "aakash-mens-wear",
+  "name": "mens-wear",
   "version": "1.0.0",
   "private": true,
-  "description": "Aakash Men's Wear — premium men's fashion storefront + owner dashboard",
+  "description": "Mens Wear \u2014 premium men's fashion storefront + owner dashboard",
   "scripts": {
     "dev": "node scripts/next.mjs dev",
     "build": "node scripts/next.mjs build",
@@ -10,7 +10,8 @@
     "db:setup": "node scripts/db-setup.mjs",
     "db:seed": "node scripts/seed.mjs",
     "setup": "node scripts/db-setup.mjs && node scripts/seed.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "admin:set": "node scripts/admin-set.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

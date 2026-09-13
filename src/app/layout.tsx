@@ -15,7 +15,7 @@ import { env } from "@/server/env";
  * admin dashboard can use a completely different shell.
  */
 
-const siteName = "Aakash Men's Wear";
+const siteName = "Mens Wear";
 
 export const metadata: Metadata = {
   metadataBase: new URL(env.siteUrl),
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#17181a",
+  themeColor: "#1c1a17",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,

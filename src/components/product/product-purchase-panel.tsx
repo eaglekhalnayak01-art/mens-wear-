@@ -43,6 +43,7 @@ export function PurchasePanel({
     returnWindowDays: number;
     freeDeliveryOver: number;
     codEnabled: boolean;
+    onlineEnabled: boolean;
   };
 }) {
   const sizeRef = useRef<HTMLDivElement>(null);
@@ -62,6 +63,17 @@ export function PurchasePanel({
     if (error) setError(null);
     setSize(label);
   };
+
+  const paymentLine =
+    product.paymentMode === "online"
+      ? settings.onlineEnabled
+        ? "Advance only — paid by UPI at checkout. We pack as soon as it lands."
+        : "Advance only — we will send a UPI link on WhatsApp to confirm the order."
+      : product.paymentMode === "cod"
+        ? "Cash at your door only. No advance for this piece."
+        : settings.codEnabled
+          ? "Pay by UPI at checkout, or cash when it arrives."
+          : "Pay online at checkout — cash on delivery is paused.";
 
   return (
     <div className="flex flex-col">
@@ -242,11 +254,15 @@ export function PurchasePanel({
           term="Dispatch"
           detail={`Packed and handed to the courier within ${settings.dispatchDays} working day${settings.dispatchDays > 1 ? "s" : ""}`}
         />
-        <PanelFact term="Delivery" detail={`${settings.deliveryDaysMin}–${settings.deliveryDaysMax} days after dispatch, tracked`} />
         <PanelFact
-          term="Cash on delivery"
-          detail={settings.codEnabled ? "Available, no handling fee. Keep the exact amount ready." : "Online payment only for this order"}
+          term="Delivery"
+          detail={
+            product.deliveryDays
+              ? `${product.deliveryDays} day${product.deliveryDays > 1 ? "s" : ""} from order, tracked`
+              : `${settings.deliveryDaysMin}–${settings.deliveryDaysMax} days after dispatch, tracked`
+          }
         />
+        <PanelFact term="Payment" detail={paymentLine} />
         <PanelFact term="Exchange" detail={`${settings.returnWindowDays}-day size exchange, first courier leg on us`} />
       </dl>
 
