@@ -19,6 +19,15 @@ Built with **Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS v
 ## Run it
 
 ```bash
+npm run up                       # install + .env.local + seed + dev, all if-needed
+```
+
+`npm run up` is the one command: it installs dependencies only if they are missing, writes
+`.env.local` with a fresh `SESSION_SECRET` only if that file is absent, builds and seeds the
+database only if `data/app.db` does not exist, then runs the dev server on port 3000. An existing
+shop is left exactly as it is, so it is safe to run every morning. The long way round:
+
+```bash
 npm install
 cp .env.example .env.local       # set SESSION_SECRET
 npm run setup                    # schema + derived images + demo data
@@ -27,6 +36,7 @@ npm run dev                      # http://localhost:3000
 
 | Script | What it does |
 | --- | --- |
+| `npm run up` | Bring the whole shop up from nothing — or after a reset — then serve it |
 | `npm run dev` | Dev server on `0.0.0.0:3000` |
 | `npm run build` / `npm start` | Production build / serve |
 | `npm run db:setup` | Apply `src/server/db/schema.sql` (idempotent; new columns are added in place) |
