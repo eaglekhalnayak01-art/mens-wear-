@@ -164,9 +164,11 @@ Deliberate choices:
 | `/product/[slug]` | BuyBox, Gallery, Accordions, Related grid, JSON-LD | VariantPicker, QuantityStepper, add-to-cart, image zoom/taps |
 | `/cart` | CartLine list, summary, empty state | qty steppers, remove |
 | `/checkout` | Steps 1-5, order summary, COD/online | address form + validation |
-| `/order/[token]` | confirmation + `OrderTimeline` | track refresh |
+| `/order/[token]` | confirmation + `OrderTimeline`, gated by `order-access` | track refresh, cancel dialog |
+| `/track` | own-order list (session only) | `TrackOrderForm` → `POST /api/store/orders/verify` |
 | `/account/*` | profile, addresses, orders | OTP form, address dialog |
 | `/policies/[slug]` | content from `settings` | — |
+| `/security` | static page describing the shipped controls | — |
 
 ## Admin screens
 
@@ -204,6 +206,17 @@ defence. `/admin/**` is `noindex` in metadata and disallowed in `robots.txt`.
 
 ## Security checklist
 
+The full audit — what was already safe, what was broken, what was fixed and what still
+needs the shop's infrastructure — is [`SECURITY-AUDIT.md`](SECURITY-AUDIT.md). The
+executable version is `npm run security:check` (22 authorization tests: two throwaway
+accounts, an order, and every wrong-door attempt in turn).
+
+Ownership is decided in exactly two places: `handle({ auth })` in
+`src/server/http/handler.ts` (auth **before** body validation, 401 vs 403 vs 404) and
+`src/server/security/order-access.ts` for reading one order — owner session, signed
+capability link, or reference + the mobile on the order. Repository writes carry
+`WHERE id = ? AND customer_id = ?` and raise when a scoped update touches no rows.
+
 scrypt password hashing (per-user salt, timing-safe compare) · random 32-byte session
 tokens stored only as SHA-256 hashes · cookie `httpOnly` `sameSite=lax` `secure` in prod
 · DB session revocation on logout · OTP: 15-min expiry, 5 attempts, single-use, hashed,
@@ -219,7 +232,11 @@ validation is UX only) · SQL only through prepared statements · media route re
 confines paths inside `data/uploads` and whitelist-checks extensions · customer PII never
 returned by admin list endpoints beyond what the screen needs · `Cache-Control: no-store`
 on all authenticated API responses · no secrets bundled: nothing sensitive is prefixed
-`NEXT_PUBLIC_`.
+`NEXT_PUBLIC_`; an enforced CSP (`default-src 'self'`, `object-src 'none'`, `base-uri 'self'`,
+`form-action 'self'`, `frame-ancestors 'none'` in production) on every response;
+`/api/store/orders/verify` capped at 30 lookups per device per 10 minutes so order references
+cannot be walked; `data/app.db` and `data/uploads` are git-ignored and are the only copies, so
+they are the backup obligation.
 
 ## Performance
 

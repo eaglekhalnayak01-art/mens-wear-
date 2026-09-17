@@ -54,3 +54,21 @@ export const env = {
 if (isProduction && env.sessionSecret === "dev-only-insecure-session-secret-change-me") {
   throw new Error("SESSION_SECRET must be set to a strong random value in production.");
 }
+
+/**
+ * Two production settings are dangerous enough to be worth shouting about at boot:
+ * OTP_TRANSPORT=log means codes only reach the server console (so nobody can sign in),
+ * and a demo flag cannot be honoured in production anyway — it is asserted here so the
+ * intent is never mistaken for a working configuration.
+ */
+if (isProduction) {
+  if (env.otp.transport === "log") {
+    console.warn(
+      "[mens-wear] OTP_TRANSPORT=log in production: one-time codes are written to this server's log, not delivered. " +
+        "Customers cannot sign in until OTP_TRANSPORT=webhook and SMS_WEBHOOK_URL point at a real SMS bridge.",
+    );
+  }
+  if (env.otp.transport === "off") {
+    console.warn("[mens-wear] OTP_TRANSPORT=off: password sign-in only — one-time codes are not being sent at all.");
+  }
+}

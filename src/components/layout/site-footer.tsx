@@ -19,6 +19,7 @@ const POLICY_LINKS = [
   { label: "Return & exchange", href: "/policies/returns" },
   { label: "Privacy policy", href: "/policies/privacy" },
   { label: "Terms & conditions", href: "/policies/terms" },
+  { label: "Security & safe shopping", href: "/security" },
 ];
 
 export function SiteFooter() {

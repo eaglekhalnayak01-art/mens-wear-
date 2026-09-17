@@ -1,4 +1,5 @@
 import { all, get, insert, nowIso, run, tx } from "@/server/db";
+import { notFound } from "@/server/http/errors";
 import type { Settings } from "@/server/repositories/settings.repository";
 
 export type CustomerRow = {
@@ -157,7 +158,7 @@ export function saveAddress(customerId: number, input: Record<string, unknown>, 
   return tx(() => {
     if (input.isDefault) run(`UPDATE customer_addresses SET is_default = 0 WHERE customer_id = ?`, customerId);
     if (id) {
-      run(
+      const touched = run(
         `UPDATE customer_addresses SET label=?, recipient=?, phone=?, line1=?, line2=?, city=?, state=?, pin=?, landmark=?, is_default=?
           WHERE id = ? AND customer_id = ?`,
         fields.label,
@@ -172,7 +173,10 @@ export function saveAddress(customerId: number, input: Record<string, unknown>, 
         input.isDefault ? 1 : 0,
         id,
         customerId,
-      );
+      ).changes;
+      // The WHERE clause is scoped to the session's customer, so an id belonging to someone
+      // else changes nothing. Saying "saved" anyway would be a lie the UI cannot detect.
+      if (!touched) throw notFound("That address is not in your account.");
       return id;
     }
     const isFirst =

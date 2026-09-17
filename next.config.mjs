@@ -33,6 +33,31 @@ const nextConfig = {
     ];
   },
   async headers() {
+    /**
+     * Content Security Policy, enforced (not report-only) so it cannot rot into a
+     * decoration. What it buys here: nothing outside this origin can be loaded as a
+     * script, no plugin object, no <base> hijack to re-point relative URLs, no form
+     * submitted to another site, and no framing except where the shop itself needs it.
+     *
+     * `'unsafe-inline'` stays on scripts and styles because Next ships bootstrap inline
+     * scripts and the design uses inline style attributes; tightening that to nonces is
+     * listed as remaining work in docs/SECURITY-AUDIT.md rather than claimed here.
+     */
+    const csp = [
+      "default-src 'self'",
+      `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data:",
+      `connect-src 'self' https://api.razorpay.com https://checkout.razorpay.com${isProduction ? "" : " ws: wss:"}`,
+      "frame-src https://api.razorpay.com https://checkout.razorpay.com https://pages.razorpay.com 'self'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      `frame-ancestors ${isProduction ? "'none'" : "'self' https://*.e2b.app"}`,
+      ...(isProduction ? ["upgrade-insecure-requests"] : []),
+    ].join("; ");
+
     return [
       {
         source: "/fonts/:all*",
@@ -49,6 +74,7 @@ const nextConfig = {
       {
         source: "/:all*",
         headers: [
+          { key: "Content-Security-Policy", value: csp },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },

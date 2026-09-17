@@ -14,7 +14,7 @@ import type { OrderStatus } from "@/lib/order-status";
  * placed with (so a leaked tracking link cannot cancel someone's order) and give a
  * reason, because the reason is what the shop acts on.
  */
-export function CancelOrder({ ref: orderRef, status, mobile }: { ref: string; status: string; mobile: string }) {
+export function CancelOrder({ orderRef, status, mobile }: { orderRef: string; status: string; mobile: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState("");

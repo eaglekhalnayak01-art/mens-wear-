@@ -238,7 +238,7 @@ export function CheckoutFlow({ settings }: { settings: CheckoutSettings }) {
     setPlacing(true);
     setBanner(null);
     try {
-      const data = await api.post<{ order: { ref: string; total: number } }>("/api/store/orders", {
+      const data = await api.post<{ order: { ref: string; total: number; trackPath?: string } }>("/api/store/orders", {
         customer: { name: form.name.trim(), mobile: normalizeMobile(form.mobile), email: form.email.trim() || undefined },
         shipping: {
           recipient: form.recipient.trim(),
@@ -262,7 +262,7 @@ export function CheckoutFlow({ settings }: { settings: CheckoutSettings }) {
       } catch {
         /* non-essential */
       }
-      router.push(`/order/${data.order.ref}`);
+      router.push(data.order.trackPath ?? `/order/${data.order.ref}`);
     } catch (error) {
       if (error instanceof ApiError) {
         const fields = error.fields ?? {};

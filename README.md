@@ -43,6 +43,7 @@ npm run dev                      # http://localhost:3000
 | `npm run db:seed` | 39 products, size/colour stock, 10 customers, 20 orders, settings, owner account |
 | `npm run admin:set` | Set the owner login yourself, in your terminal — nothing about it is stored in this repo |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run security:check` | 22 authorization tests against a running shop (see `docs/SECURITY-AUDIT.md`) |
 
 **There is no demo owner login.** `npm run db:seed` either uses `ADMIN_EMAIL` / `ADMIN_PASSWORD`
 from `.env.local` or generates a password and prints it once in the terminal. To choose (or change)
@@ -153,4 +154,31 @@ wishlist, courier webhooks. The tables and status flows they need already exist.
 3. `AUTH_DEMO_RETURN_OTP=false` (ignored in production anyway) and set `OTP_TRANSPORT`.
 4. Put your real UPI id + QR in Settings → Payment QR, and your mobile number in Settings → Order alerts.
 5. Replace the placeholder photography in the admin image manager, or drop files in
-   `public/images/products/` and re-run `node scripts/build-images.mjs`.
+   `public/images/products/` and re-run `node scripts/build-images.mjs`.## Security
+
+The rule the whole app is built around: **a customer can only ever reach their own data, and the
+decision is made on the server** — never by hiding a button.
+
+- Orders open for the signed-in owner of the order, for a signed tracking link minted at checkout,
+  or after the reference **and** the mobile number on the order are confirmed. A bare reference
+  renders a blank verifier and no order fields ([`src/server/security/order-access.ts`](src/server/security/order-access.ts)).
+- Saved addresses, profile and order lists are keyed to the session id in SQL (`WHERE … AND customer_id = ?`);
+  touching someone else's row is a 404, not a silent success.
+- `handle({ auth })` authorises **before** validating a body, so an unauthenticated caller cannot
+  collect admin schema feedback; customers get 401, wrong roles get 403.
+- Customers and the owner are separate tables, separate cookies and separate `subject_type`s on the
+  session rows — a customer token cannot be replayed on `/api/admin/*`.
+- scrypt password hashes (never returned by any query), hashed session tokens, one-time codes that
+  cannot be echoed back in production, per-IP and per-number rate limits, CSRF origin checks,
+  enforced CSP and no `/admin` link, noindex + `robots.txt` on the owner area.
+- Customers read the same promises on [`/security`](/security) — written to describe shipped controls only.
+
+Full audit, what was broken, what was fixed and what still needs the shop's own infrastructure:
+**[`docs/SECURITY-AUDIT.md`](docs/SECURITY-AUDIT.md)**. Re-run the proof after any refactor:
+
+```bash
+npm run dev &            # a dev shop, so one-time codes can be handed to the script
+npm run security:check -- --clean
+```
+
+

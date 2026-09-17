@@ -17,11 +17,12 @@ import { STATUS_META, TIMELINE_STEPS, releasesStock, type OrderStatus } from "@/
 import type { CheckoutInput } from "@/server/services/checkout-types";
 
 const REF_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1 — phone friendly
+const REF_SUFFIX_LENGTH = 8; // ~40 bits: a reference is a lookup key, never a secret to brute force
 
 export function makePublicRef() {
   const year = new Date().getFullYear();
   let suffix = "";
-  for (let i = 0; i < 5; i += 1) suffix += REF_ALPHABET[crypto.randomInt(REF_ALPHABET.length)];
+  for (let i = 0; i < REF_SUFFIX_LENGTH; i += 1) suffix += REF_ALPHABET[crypto.randomInt(REF_ALPHABET.length)];
   return `AMW-${year}-${suffix}`;
 }
 
@@ -51,7 +52,9 @@ function uniquePublicRef() {
     const candidate = makePublicRef();
     if (!get(`SELECT id FROM orders WHERE public_ref = ?`, candidate)) return candidate;
   }
-  return `AMW-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+  // Six collisions in a row is a broken RNG, not bad luck — refuse rather than mint a
+  // timestamp-shaped reference, which anyone could walk through.
+  throw new Error("Could not allocate a unique order reference. Please try the order again.");
 }
 
 export type PlacedOrder = {

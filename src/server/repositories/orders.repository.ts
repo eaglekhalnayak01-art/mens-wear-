@@ -202,13 +202,11 @@ export function getOrderByPublicId(id: number): OrderDetail | null {
   return row ? buildOrderDetail(row) : null;
 }
 
-export function listRecentOrdersForMobile(mobile: string, limit = 5) {
-  return all<OrderSummary>(
-    `${ORDER_SELECT} WHERE REPLACE(o.guest_mobile,' ','') = ? ORDER BY o.placed_at DESC LIMIT ?`,
-    mobile,
-    limit,
-  );
-}
+/**
+ * There is deliberately no `listRecentOrdersForMobile`: typing a phone number into a
+ * tracking box is not proof of anything. Orders are listed by session id
+ * (`listOrdersForCustomer`) or matched by reference *plus* the number on the order.
+ */
 
 export function listOrdersForCustomer(customerId: number, limit = 30) {
   return all<OrderSummary>(

@@ -2,10 +2,47 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AdminLoginForm } from "@/components/admin/admin-login-form";
 import { Wordmark } from "@/components/layout/wordmark";
-import { currentAdmin } from "@/server/security/guard";
+import { currentAdmin, currentCustomer } from "@/server/security/guard";
+import { IconLock } from "@/components/ui/icons";
 import { getSettings } from "@/server/queries";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Roles are two separate systems on purpose: customers authenticate against `customers`
+ * with one cookie, the owner against `admin_users` with another, and every session row is
+ * stamped with its subject type — so a customer token cannot be replayed on an admin route
+ * even by someone who reaches this page deliberately.
+ */
+function ShopperDenied({ mobile }: { mobile: string }) {
+  return (
+    <div className="rounded-[var(--radius-md)] border border-line bg-paper p-5">
+      <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-bad">
+        <IconLock size={14} /> Access denied
+      </p>
+      <h3 className="mt-2.5 font-display text-[19px] leading-snug text-ink">This is the owner&rsquo;s area</h3>
+      <p className="mt-2 text-[13px] leading-relaxed text-graphite">
+        You are signed in as a customer of the shop ({mobile}). Customers keep their own orders, addresses and saved
+        numbers in their account — the catalogue, prices and other people&rsquo;s orders are not part of it, and no
+        password typed here would change that.
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2.5">
+        <a
+          href="/account"
+          className="inline-flex h-10 items-center rounded-[var(--radius-sm)] bg-ink px-4 text-[12px] font-semibold uppercase tracking-[0.08em] text-bone transition-colors hover:bg-ink-soft"
+        >
+          My account
+        </a>
+        <a
+          href="/"
+          className="inline-flex h-10 items-center rounded-[var(--radius-sm)] border border-line px-4 text-[12px] font-semibold uppercase tracking-[0.08em] text-ink transition-colors hover:border-ink"
+        >
+          Back to the shop
+        </a>
+      </div>
+    </div>
+  );
+}
 
 export const metadata: Metadata = { title: "Owner sign-in", robots: { index: false, follow: false } };
 
@@ -16,6 +53,9 @@ export default async function AdminLoginPage({ searchParams }: { searchParams: S
   const admin = await currentAdmin();
   // Only a verified session gets forwarded, and only to a dashboard path.
   if (admin) redirect(next && next.startsWith("/admin") ? next : "/admin");
+  // A signed-in *customer* who reaches /admin is not lost — they are in the wrong role.
+  // Say that plainly instead of handing them a password box to poke at.
+  const shopper = await currentCustomer();
   const settings = getSettings();
 
   return (
@@ -52,9 +92,7 @@ export default async function AdminLoginPage({ searchParams }: { searchParams: S
           <p className="mt-2 text-[13px] leading-relaxed text-muted">
             Sign in to manage the catalogue, orders and settings. The shop itself never links here.
           </p>
-          <div className="mt-6">
-            <AdminLoginForm next={next ?? "/admin"} />
-          </div>
+          <div className="mt-6">{shopper ? <ShopperDenied mobile={shopper.mobile} /> : <AdminLoginForm next={next ?? "/admin"} />}</div>
           <p className="mt-5 text-[11.5px] leading-relaxed text-muted">
             One owner account, created on the shop machine with{" "}
             <code className="nums rounded bg-sand px-1 py-0.5 text-[10.5px]">npm run admin:set</code>. There is no shared demo login, and five wrong

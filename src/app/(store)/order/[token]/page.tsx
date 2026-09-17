@@ -6,8 +6,10 @@ import { StatusPill } from "@/components/ui/badge";
 import { SafeImage } from "@/components/ui/safe-image";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconCheck, IconMail, IconTruck, IconWhatsapp } from "@/components/ui/icons";
+import { OrderVerifyForm } from "@/components/order/order-verify-form";
 import { getOrderByRef } from "@/server/repositories/orders.repository";
 import { currentCustomer } from "@/server/security/guard";
+import { readOrderToken } from "@/server/security/order-access";
 import { getSettings } from "@/server/queries";
 import { customerConfirmationLink } from "@/server/services/notifications.service";
 import { formatDate, formatDateTime, money } from "@/lib/format";
@@ -19,12 +21,15 @@ export const dynamic = "force-dynamic";
 type Params = Promise<{ token: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+  // Titles travel: they show up in search results and in link previews. So the order is
+  // only ever named here when the link itself carries our signature.
   const { token } = await params;
-  const order = getOrderByRef(decodeURIComponent(token));
+  const { ref, signed } = readOrderToken(token);
+  const order = signed ? getOrderByRef(ref) : null;
   return {
     title: order ? `Order ${order.publicRef}` : "Track your order",
     description: order
-      ? `Status, delivery address and timeline for order ${order.publicRef} at Mens Wear.`
+      ? `Status and timeline for order ${order.publicRef} at Mens Wear.`
       : "Enter your order reference and mobile number to see where your parcel is.",
     robots: { index: false, follow: false },
     openGraph: { title: `Order ${order?.publicRef ?? ""}`, url: absoluteUrl(`/order/${token}`) },
@@ -33,7 +38,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function OrderPage({ params }: { params: Params }) {
   const { token } = await params;
-  const ref = decodeURIComponent(token).trim();
+  const { ref, signed } = readOrderToken(token);
   const order = getOrderByRef(ref);
   const settings = getSettings();
   const customer = await currentCustomer();
@@ -65,7 +70,34 @@ export default async function OrderPage({ params }: { params: Params }) {
     );
   }
 
-  const mine = customer ? customer.id === order.customerId : false;
+  // A signed link (minted at checkout, sent to the customer's own number) or the account
+  // the order belongs to. Anything else gets the verifier, which shows no order data at all.
+  const mine = Boolean(customer && customer.id === order.customerId);
+  if (!signed && !mine) {
+    return (
+      <div className="shop-shell py-12 md:py-16">
+        <div className="mx-auto max-w-[560px] text-center">
+          <p className="eyebrow mb-2">Mens Wear · order status</p>
+          <h1 className="font-display text-[clamp(1.6rem,1.3rem+1.3vw,2.2rem)] leading-[1.12] text-ink">
+            One more thing before we open it
+          </h1>
+          <p className="mt-2.5 text-[13.5px] leading-relaxed text-graphite">
+            This page shows a name, a phone number and a front door, so we check it is yours first.
+          </p>
+        </div>
+        <div className="mt-7">
+          <OrderVerifyForm reference={order.publicRef} />
+        </div>
+        <p className="mt-5 text-center text-[12.5px] text-muted">
+          Not your order?{" "}
+          <Link href="/track" className="link-line text-ink">
+            Track your own by number
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
   const confirmationLink = customerConfirmationLink(settings, { publicRef: order.publicRef, customerName: order.customerName, total: order.total });
   const justPlaced = order.status === "placed";
 
@@ -232,7 +264,7 @@ export default async function OrderPage({ params }: { params: Params }) {
                   <IconMail size={15} className="text-brass" /> Email us instead
                 </a>
                 <div className="border-t border-line pt-2.5">
-                  <CancelOrder ref={order.publicRef} status={order.status} mobile={order.customerMobile} />
+                  <CancelOrder orderRef={order.publicRef} status={order.status} mobile={order.customerMobile} />
                 </div>
               </div>
             </section>

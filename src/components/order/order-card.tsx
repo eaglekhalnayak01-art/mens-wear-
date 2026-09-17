@@ -5,6 +5,7 @@ import { SafeImage } from "@/components/ui/safe-image";
 import { statusMeta } from "@/lib/order-status";
 import { formatDate, money } from "@/lib/format";
 import type { OrderSummary } from "@/server/repositories/types";
+import { orderTrackingPath } from "@/server/security/order-access";
 
 /**
  * One row per order for the account list and the tracking page. Preview images come
@@ -17,7 +18,7 @@ export function OrderCard({ order, preview }: { order: OrderSummary; preview?: {
     <article className="card-surface overflow-hidden">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
         <div className="min-w-0">
-          <Link href={`/order/${order.publicRef}`} className="text-[13px] font-semibold text-ink transition-colors hover:text-brass-deep">
+          <Link href={orderTrackingPath(order.publicRef)} className="text-[13px] font-semibold text-ink transition-colors hover:text-brass-deep">
             Order {order.publicRef}
           </Link>
           <p className="mt-0.5 text-[12px] text-muted">
@@ -48,7 +49,7 @@ export function OrderCard({ order, preview }: { order: OrderSummary; preview?: {
         <p className="mt-2.5 text-[12.5px] leading-relaxed text-muted">{meta.note}</p>
 
         <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <Link href={`/order/${order.publicRef}`} className="link-line text-[12.5px] text-ink">
+          <Link href={orderTrackingPath(order.publicRef)} className="link-line text-[12.5px] text-ink">
             View & track
           </Link>
           <span className="text-[12px] text-muted">

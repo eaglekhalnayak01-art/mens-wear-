@@ -28,6 +28,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ["/collections/sale", 0.7, "weekly"],
     ["/about", 0.5, "monthly"],
     ["/contact", 0.5, "monthly"],
+    ["/security", 0.4, "monthly"],
     ["/track", 0.4, "monthly"],
   ];
 

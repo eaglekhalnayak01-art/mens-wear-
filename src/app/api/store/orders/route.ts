@@ -6,6 +6,7 @@ import { checkoutSchema } from "@/server/validation/schemas";
 import { placeOrder } from "@/server/services/orders.service";
 import { notifyOrderPlaced } from "@/server/services/notifications.service";
 import { readSettings } from "@/server/repositories/settings.repository";
+import { orderTrackingPath } from "@/server/security/order-access";
 
 /**
  * Placing an order. Everything is re-derived server-side: the items are only
@@ -19,7 +20,7 @@ const bodySchema = checkoutSchema.extend({
 });
 
 export const POST = handle<z.infer<typeof bodySchema>>(
-  { body: bodySchema, rate: { bucket: "place-order", limit: 12, windowMs: 60 * 60_000 } },
+  { body: bodySchema, rate: { bucket: "place-order", limit: 40, windowMs: 60 * 60_000 } },
   async ({ body, customer }) => {
     if (body.honeypot) return { ok: false }; // silently drop bots
 
@@ -74,7 +75,9 @@ export const POST = handle<z.infer<typeof bodySchema>>(
         status: order.status,
         expectedDeliveryAt: order.expectedDeliveryAt,
         lines: order.lines,
-        trackPath: `/order/${order.publicRef}`,
+        // Signed capability link, not the bare reference: this is the URL we hand the
+        // customer after checkout and the one put in their WhatsApp confirmation.
+        trackPath: orderTrackingPath(order.publicRef),
       },
     };
   },

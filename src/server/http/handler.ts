@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { ZodType } from "zod";
 import { ZodError } from "zod";
 import { assertSameOrigin, currentCustomer, requireAdmin, requireCustomer } from "@/server/security/guard";
-import { badRequest, errorBody, rateLimited } from "@/server/http/errors";
+import { badRequest, errorBody, rateLimited, unauthorized } from "@/server/http/errors";
 import { clientIp } from "@/server/security/sessions";
 import { consume } from "@/server/security/rate-limit";
 import type { AdminUser, CustomerUser } from "@/server/security/guard";
@@ -54,20 +54,15 @@ export function handle<Body = any>(
       if (options.csrf !== false) assertSameOrigin(req);
 
       const params = (await segment?.params) ?? {};
-      let body: any = {};
 
-      if (options.body) {
-        const raw = await readJson(req);
-        const parsed = options.body.safeParse(raw);
-        if (!parsed.success) {
-          const { message, fields } = zodIssues(parsed.error);
-          throw badRequest(message, fields);
-        }
-        body = parsed.data;
-      }
+      // The body is read once, up front, because a rate bucket may be keyed on one of its
+      // fields (the mobile being OTP'd, the number placing an order). Parsing it into a
+      // typed value happens further down — deliberately *after* authorisation, so an
+      // unauthenticated caller cannot collect validation feedback from a admin-only route.
+      const raw = await readJson(req);
 
       if (options.rate) {
-        const key = `${options.rate.bucket}:${options.rate.keyFrom ? options.rate.keyFrom(body) : (clientIp(req) ?? "local")}`;
+        const key = `${options.rate.bucket}:${options.rate.keyFrom ? options.rate.keyFrom(raw) : (clientIp(req) ?? "local")}`;
         const limit = consume(key, options.rate.limit, options.rate.windowMs);
         if (!limit.ok) {
           const wait = Math.ceil(limit.retryAfterSec / 60);
@@ -80,6 +75,23 @@ export function handle<Body = any>(
         }
       }
 
+      const auth = options.auth ?? "public";
+      let admin: AdminUser | null = null;
+      let customer: CustomerUser | null = null;
+      if (auth === "admin") admin = await requireAdmin(req);
+      if (auth === "customer") customer = await currentCustomer().then((c) => { if (!c) throw unauthorized("Please sign in with your mobile number to continue."); return c; });
+      if (auth === "public") customer = await currentCustomer();
+
+      let body: any = {};
+      if (options.body) {
+        const parsed = options.body.safeParse(raw);
+        if (!parsed.success) {
+          const { message, fields } = zodIssues(parsed.error);
+          throw badRequest(message, fields);
+        }
+        body = parsed.data;
+      }
+
       let query: any = undefined;
       if (options.query) {
         const parsed = options.query.safeParse(Object.fromEntries(req.nextUrl.searchParams.entries()));
@@ -89,13 +101,6 @@ export function handle<Body = any>(
         }
         query = parsed.data;
       }
-
-      const auth = options.auth ?? "public";
-      let admin: AdminUser | null = null;
-      let customer: CustomerUser | null = null;
-      if (auth === "admin") admin = await requireAdmin(req);
-      if (auth === "customer") customer = await currentCustomer().then((c) => { if (!c) throw badRequest("Please sign in."); return c; });
-      if (auth === "public") customer = await currentCustomer();
 
       const result = await fn({ req, body, query, params, admin, customer });
 
